@@ -127,9 +127,11 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           }
 
           if (exists == 0){
+            send_ICMP(sr, map->packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_tcp_hdr_t), 3, 3);
           }
 
         } else {
+          send_ICMP(sr, map->packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_tcp_hdr_t), 3, 3);
         }
 
         if (temp){
