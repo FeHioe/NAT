@@ -185,11 +185,11 @@ struct sr_rt *check_routing_table(struct sr_instance *sr, sr_ip_hdr_t *ip_header
    struct sr_rt* tmp_rt = NULL;
 
    while(routingtable != NULL) {
-     uint32_t rt_m = routingtable->dest.s_addr & routingtable->mask.s_addr;
+     uint32_t rt_m = routingtable->mask.s_addr;
 
      /*  Want to check if the IP destination address matches the address in the routing table 
         and make sure that it is always lpm */
-     if ((rt_m & ip_header->ip_dst) == rt_m && (tmp_rt == NULL || tmp_rt->dest.s_addr < rt_m)){
+     if ((rt_m & ip_header->ip_dst) == (rt_m & routingtable->dest.s_addr) && (tmp_rt == NULL || tmp_rt->mask.s_addr < rt_m)){
 	    tmp_rt = routingtable;
 
      }
