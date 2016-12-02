@@ -98,7 +98,7 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         } else {
             icmp_size = ICMP_DATA_SIZE;
         }
-        memcpy(icmp_header->data, packet + sizeof(sr_ethernet_hdr_t), icmp_size);
+        memcpy(icmp_header->data, packet + sizeof(sr_ethernet_hdr_t), ICMP_DATA_SIZE);
         icmp_header->unused = 0;
         icmp_header->next_mtu = 0;
         len = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t8_hdr_t);
