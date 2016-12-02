@@ -152,11 +152,11 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
             struct sr_nat_connection *temp_con = NULL;
 
             while (connection) {
-
+              unsigned int timeout;
               if (connection->state == ESTAB2){
-                unsigned int timeout = nat->tcp_established_timeout;
+                timeout = nat->tcp_established_timeout;
               } else {
-                unsigned int timeout = nat->tcp_transitory_timeout;
+                timeout = nat->tcp_transitory_timeout;
               }
 
               if (timeout <= difftime(curtime, connection->last_updated)){
