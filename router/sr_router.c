@@ -120,8 +120,6 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
         struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
-        sr_ethernet_hdr_t* e_header = (sr_ethernet_hdr_t*) reply_packet;
-        sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (reply_packet + sizeof(sr_ethernet_hdr_t));
         
         if (entry) {
             memcpy(e_header->ether_dhost ,entry->mac, 6);
