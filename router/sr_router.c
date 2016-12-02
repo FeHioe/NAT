@@ -105,7 +105,7 @@ void send_ICMP(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_
         struct sr_if* interface = sr_get_interface(sr, lpm->interface);
         memcpy(e_header->ether_shost, interface->addr, 6);
         e_header->ether_type = htons(0x0800);
-        ip_src = interface->ip;
+        uint32_t ip_src = interface->ip;
 
         ip_header->ip_hl = 5;
         ip_header->ip_v = 4;
