@@ -81,7 +81,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
 
     /* handle periodic tasks here */
     struct sr_nat_mapping *map = nat->mappings;
-    struct sr_nat_mappinh *temp = NULL;
+    struct sr_nat_mapping *temp = NULL;
 
     while(map){ 
       double elapsed = difftime(curtime, map->last_updated);
@@ -105,7 +105,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           struct sr_nat_connection *connection = map->conns;
 
           while (connection) {
-            if (connection->ip == maps->ip_ext){
+            if (connection->conn_ip == maps->ip_ext){
               exists = 1;
               break;
             }
