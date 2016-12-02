@@ -55,8 +55,8 @@ struct sr_instance
     pthread_attr_t attr;
     FILE* logfile;
 
-    int is_nat; /* check for NAT */
-    struct sr_nat nat; 
+    struct sr_nat nat;
+    unsigned short mode;
 };
 
 /* -- sr_main.c -- */
@@ -68,7 +68,11 @@ int sr_connect_to_server(struct sr_instance* ,unsigned short , char* );
 int sr_read_from_server(struct sr_instance* );
 
 /* -- sr_router.c -- */
-void sr_init(struct sr_instance* );
+void sr_init(struct sr_instance* sr, 
+             unsigned short mode,
+             unsigned int icmp_timeout,
+             unsigned int tcp_est_timeout,
+             unsigned int tcp_trans_timeout);
 void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
 struct sr_if* sr_interface_contains_ip(struct sr_instance*, sr_ip_hdr_t*);
 void send_icmp_messages(struct sr_instance*, uint8_t*, int, int);
