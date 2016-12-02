@@ -71,12 +71,12 @@ int main(int argc, char **argv)
     unsigned int topo = DEFAULT_TOPO;
     char *logfile = 0;
     struct sr_instance sr;
-
-    unsigned short mode = 0;
-    unsigned int nat_icmpTO = 60;
-    unsigned int nat_tcpEstTO = 7440;
-    unsigned int nat_tcpTransTO = 300;
-
+ 
+    /*NAT variables*/
+    int nat_check = 0;
+    unsigned int icmp_query = DEFAULT_ICMP_QUERY;
+    unsigned int tcp_established = DEFAULT_TCP_ESTABLISHED;
+    unsigned int tcp_transitory = DEFAULT_TCP_TRANSITORY;
 
     printf("Using %s\n", VERSION_INFO);
 
@@ -113,16 +113,16 @@ int main(int argc, char **argv)
                 template = optarg;
                 break;
             case 'n':
-                mode = 1;
+                nat_check = 1;
                 break;
             case 'I':
-                nat_icmpTO = atoi((char *) optarg);
+                icmp_query = atoi((char *) optarg);
                 break;
             case 'E':
-                nat_tcpEstTO = atoi((char *) optarg);
+                tcp_established = atoi((char *) optarg);
                 break;
             case 'R':
-                nat_tcpTransTO = atoi((char *) optarg);
+                tcp_transitory = atoi((char *) optarg);
                 break;
                 
         } /* switch */
@@ -180,8 +180,14 @@ int main(int argc, char **argv)
       sr_load_rt_wrap(&sr, rtable);
     }
 
+    /* enable NAT function before going into router */
+    sr.is_nat = nat_check;
+    sr.nat.icmp_query_timeout = icmp_query;
+    sr.nat.tcp_established_timeout = tcp_established;
+    sr.nat.tcp_transitory_timeout = tcp_transitory;
+
     /* call router init (for arp subsystem etc.) */
-    sr_init(&sr, mode, nat_icmpTO, nat_tcpEstTO, nat_tcpTransTO);
+    sr_init(&sr, nat_check, icmp_query, tcp_established, tcp_transitory);
 
     /* -- whizbang main loop ;-) */
     while( sr_read_from_server(&sr) == 1);

@@ -11,9 +11,9 @@
 
 int sr_nat_init(void *sr,
                 struct sr_nat *nat,
-                unsigned int icmp_timeout,
-                unsigned int tcp_est_timeout,
-                unsigned int tcp_trans_timeout) {
+                unsigned int icmp_query_timeout,
+                unsigned int tcp_established_timeout,
+                unsigned int tcp_transitory_timeout) {
 
   assert(nat);
 
@@ -34,9 +34,9 @@ int sr_nat_init(void *sr,
 
   nat->mappings = NULL;
   /* Initialize any variables here */
-  nat->icmp_to = icmp_timeout;
-  nat->tcp_est_to = tcp_est_timeout;
-  nat->tcp_trans_to = tcp_trans_timeout;
+  nat->icmp_query_timeout = icmp_query_timeout;
+  nat->tcp_established_timeout = tcp_established_timeout;
+  nat->tcp_transitory_timeout = tcp_transitory_timeout;
   
   nat->icmp_id = (unsigned short)(time(NULL));
   nat->tcp_id = 1024;
@@ -88,7 +88,7 @@ void *sr_nat_timeout(void * sr_ptr) {  /* Periodic Timout handling */
     while(maps != NULL){ /*TODO: SEND ICMP??*/
       double diff = difftime(curtime, maps->last_updated);
         
-      if (maps->type == nat_mapping_icmp && diff > nat->icmp_to){
+      if (maps->type == nat_mapping_icmp && diff > nat->icmp_query_timeout){
           if(prev == NULL){
             nat->mappings = NULL;
           } else {
@@ -121,14 +121,14 @@ void *sr_nat_timeout(void * sr_ptr) {  /* Periodic Timout handling */
           }
           sr_free_mapping(maps);
       }else if (maps->type == nat_mapping_tcp){
-          if (diff >= nat->tcp_est_to){
+          if (diff >= nat->tcp_established_timeout){
               sr_free_mapping(maps);
           } else {
               unsigned char keep = 0;
               struct sr_nat_connection *con = maps->conns;
               struct sr_nat_connection *prev_con = maps->conns;
               for (con = maps->conns; con != NULL; con = con->next) {
-                  unsigned int timeout = ((con->state == ESTAB2) ? nat->tcp_est_to : nat->tcp_trans_to);
+                  unsigned int timeout = ((con->state == ESTAB2) ? nat->tcp_established_timeout : nat->tcp_transitory_timeout);
                   if (difftime(curtime, con->last_updated) >= timeout){
                      prev_con->next = con->next;
                      free(con);

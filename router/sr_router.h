@@ -56,8 +56,8 @@ struct sr_instance
     pthread_attr_t attr;
     FILE* logfile;
 
+    int is_nat; /* check for NAT */
     struct sr_nat nat;
-    unsigned short mode;
 };
 
 void sr_send_icmp(struct sr_instance* sr,

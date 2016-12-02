@@ -50,9 +50,9 @@ struct sr_nat_mapping {
 struct sr_nat {
   /* add any fields here */
   struct sr_nat_mapping *mappings;
-  unsigned int icmp_to;
-  unsigned int tcp_est_to;
-  unsigned int tcp_trans_to;
+  unsigned int icmp_query_timeout;
+  unsigned int tcp_established_timeout;
+  unsigned int tcp_transitory_timeout;
   
   unsigned short icmp_id;
   unsigned short tcp_id;
