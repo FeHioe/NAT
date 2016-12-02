@@ -41,39 +41,31 @@ void sr_ForwardPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len,
 void handle_arpreq(struct sr_arpreq *sr_req, struct sr_instance *sr);
 void create_send_ICMP_packet(struct sr_packet *packet, struct sr_instance *sr, int type, int code);
 
-void sendIPPacket(struct sr_instance* sr,
-               uint8_t* packet, 
-               unsigned int len, 
-               struct sr_rt* rt){
-    struct sr_if* iface = sr_get_interface(sr, rt->interface);
-    struct sr_arpentry* entry;
-    pthread_mutex_lock(&(sr->cache.lock));
-    entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(rt->gw.s_addr));
-    sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*) packet;
-    sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (packet+SIZE_ETH);
+void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct sr_rt* lpm){
+    sr_ethernet_hdr_t* e_header = (sr_ethernet_hdr_t*) packet;
+    sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
     
+    struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
     if (entry) {
-        fprintf(stderr,"Found cache hit\n");
-        iface = sr_get_interface(sr, rt->interface);
-        memcpy(eth_header->ether_dhost,entry->mac,6);
-        memcpy(eth_header->ether_shost,iface->addr,6);
+        memcpy(e_header->ether_dhost, entry->mac, 6);
+        memcpy(e_header->ether_shost, interface->addr, 6);
+
         ip_header->ip_ttl = ip_header->ip_ttl - 1;
         ip_header->ip_sum = 0;
-        ip_header->ip_sum = cksum((uint8_t *)ip_header,SIZE_IP);
-        sr_send_packet(sr,packet,len,rt->interface);
+        ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
+
+        struct sr_if* interface = sr_get_interface(sr, lpm->interface);
+        sr_send_packet(sr, packet, len, lpm->interface);
         free(entry);
+
     } else {
-        fprintf(stderr,"Adding ARP Request\n");
-        memcpy(eth_header->ether_shost,iface->addr,6);
-        struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), 
-                                                     (uint32_t)(rt->gw.s_addr), 
-                                                     packet, 
-                                                     len, 
-                                                     rt->interface);
+        struct sr_if* interface = sr_get_interface(sr, lpm->interface);
+        memcpy(e_header->ether_shost, interface->addr, 6);
+
+        struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), lpm->gw.s_addr, packet, len, lpm->interface);
         handle_arpreq(req, sr);
     }
-    pthread_mutex_unlock(&(sr->cache.lock));
-} /*end sendIPPacket */
+}
 
 void sr_send_icmp(struct sr_instance* sr,
         uint8_t *buf,
@@ -224,7 +216,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 mfree(map);
 
                 struct sr_rt * lpm = check_routing_table(sr, ip_header);
-                sendIPPacket(sr, packet, len, lpm);
+                send_IP(sr, packet, len, lpm);
             }
 
         } else if (ip_header->ip_p == 6){ /* TCP */
@@ -251,7 +243,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             mfree(map);
 
             struct sr_rt * lpm = check_routing_table(sr, ip_header);
-            sendIPPacket(sr, packet, len, lpm);
+            send_IP(sr, packet, len, lpm);
             
         } 
     } else if (strcmp(interface, "eth2") == 0){ /* External */
@@ -286,7 +278,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                         ip_header->ip_sum = 0;
                         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
                         
-                        sendIPPacket(sr, packet, len, lpm);
+                        send_IP(sr, packet, len, lpm);
                     }
 
                     mfree(map);
@@ -320,7 +312,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 
                     struct sr_rt * lpm = check_routing_table(sr, ip_header);
                     if (lpm){
-                        sendIPPacket(sr, packet, len, lpm);
+                        send_IP(sr, packet, len, lpm);
                     }
 
                 } else if (tcp_header->syn) {
