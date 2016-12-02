@@ -364,7 +364,7 @@ void sr_handlepacket(struct sr_instance* sr,
     printf("Ethernet Type: ARP\n");
     process_arp(sr, packet, len, interface);
   } else if (ethernet_type == ethertype_ip) {
-    if (sr->mode == 1) {
+    if (sr->is_nat == 1) {
         printf("Ethernet Type: IP - NAT\n");
         struct sr_if * iface = sr_get_interface(sr, interface);
         natHandleIPPacket(sr, packet, len, iface);
