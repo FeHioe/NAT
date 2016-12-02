@@ -159,11 +159,9 @@ void sr_send_icmp(struct sr_instance* sr,
     }
 }/* end sr_send_icmp */
 
-void natHandleIPPacket(struct sr_instance* sr, 
-        uint8_t* packet,
-        unsigned int len, 
-        struct sr_if * rec_iface)
-{
+void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface){
+    
+    struct sr_if * rec_iface = sr_get_interface(sr, interface);
     sr_ip_hdr_t * ip_header = (sr_ip_hdr_t *)(packet+SIZE_ETH);
     struct sr_if *tgt_iface = sr_get_interface_from_ip(sr,ip_header->ip_dst);
     struct sr_rt * rt = NULL;
@@ -321,12 +319,7 @@ void natHandleIPPacket(struct sr_instance* sr,
     }
 }/* end natHandleIPPacket */
 
-void sr_init(struct sr_instance* sr, 
-             unsigned short nat_check,
-             unsigned int icmp_query_timeout,
-             unsigned int tcp_established_timeout,
-             unsigned int tcp_transitory_timeout)
-{
+void sr_init(struct sr_instance* sr, unsigned short nat_check, unsigned int icmp_query_timeout, unsigned int tcp_established_timeout, unsigned int tcp_transitory_timeout){
     /* REQUIRES */
     assert(sr);
 
@@ -390,8 +383,7 @@ void sr_handlepacket(struct sr_instance* sr,
   } else if (ethernet_type == ethertype_ip) {
     if (sr->is_nat == 1) {
         printf("Ethernet Type: IP - NAT\n");
-        struct sr_if * iface = sr_get_interface(sr, interface);
-        natHandleIPPacket(sr, packet, len, iface);
+        natHandleIPPacket(sr, packet, len, interface);
     } else {
         printf("Ethernet Type: IP\n");
         process_ip(sr, packet, len, interface);
