@@ -70,6 +70,20 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
 
 }
 
+void *mfree(struct sr_nat_mapping * map){
+   if (map->conns != NULL){
+      struct sr_nat_connection *con = map->conns;
+      for (con = map->conns; con != NULL; con = con->next) {
+          free(con);
+      }
+   }
+   if (map->packet != NULL){
+     free(map->packet);
+   }
+   free(map);
+   return NULL;
+}
+
 void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
   struct sr_instance *sr = (struct sr_instance *)nat_ptr;
   struct sr_nat *nat = &(sr->nat);
@@ -129,7 +143,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
         mfree(map);
 
       }else if (map->type == nat_mapping_tcp){
-          if (diff >= nat->tcp_established_timeout){
+          if (elapsed >= nat->tcp_established_timeout){
               mfree(map);
           } else {
               unsigned char keep = 0;
@@ -366,18 +380,4 @@ struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat, void * bu
     
     pthread_mutex_unlock(&(nat->lock));
     return copy;
-}
-
-void *mfree(struct sr_nat_mapping * map){
-   if (map->conns != NULL){
-      struct sr_nat_connection *con = map->conns;
-      for (con = map->conns; con != NULL; con = con->next) {
-          free(con);
-      }
-   }
-   if (map->packet != NULL){
-     free(map->packet);
-   }
-   free(map);
-   return NULL;
 }
