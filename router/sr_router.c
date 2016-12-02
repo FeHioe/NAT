@@ -110,8 +110,10 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         
         struct sr_if* interface = sr_get_interface(sr, lpm->interface);
         memcpy(e_header->ether_shost, interface->addr, 6);
-        e_header->ether_type = ethertype_ip;
-        ip_src = interface->ip;
+        e_header->ether_type = htons(0x0800);
+        if (ip_src == 0){
+            ip_src = interface->ip;
+        }
 
         ip_header->ip_hl = 5;
         ip_header->ip_v = 4;
@@ -133,7 +135,7 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         
         if (entry) {
             memcpy(e_header->ether_dhost,entry->mac,6);
-            memcpy(e_header->ether_shost,interface->addr,6);
+            memcpy(e_header->ether_shost,iface->addr,6);
             ip_header->ip_ttl = ip_header->ip_ttl - 1;
             ip_header->ip_sum = 0;
             ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
