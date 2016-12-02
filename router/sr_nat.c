@@ -72,7 +72,7 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
   pthread_mutex_lock(&(nat->lock));
 
   /* free nat memory here */
-  struct sr_nat_mapping *map = nat->mapping;
+  struct sr_nat_mapping *map = nat->mappings;
   while (map) {
     struct sr_nat_mapping *temp = map;
     map = map->next;
@@ -183,20 +183,24 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
 
   pthread_mutex_lock(&(nat->lock));
 
-  /* handle lookup here, malloc and assign to copy. */
-  struct sr_nat_mapping *copy = NULL;
-  struct sr_nat_mapping *maps = nat->mappings;
-  fprintf(stderr,"Lookup External %u\n",aux_ext);
-  while(maps != NULL){
-    fprintf(stderr,"\t comparing to: %u\n", aux_ext);
-    if (maps->aux_ext == aux_ext && type == maps->type){
-      /*maps->last_updated = time(NULL);*/
-      copy = copy_map(maps);
-      pthread_mutex_unlock(&(nat->lock));
-      return copy;
+  /* handle lookup here, malloc and assign to copy */
+  struct sr_nat_mapping *copy = (struct sr_nat_mapping *) malloc(sizeof(struct sr_nat_mapping));
+  
+  struct sr_nat_mapping *map = nat->mappings;
+  while (map){
+    if (map->aux_ext == aux_ext && map->type == type) {
+      memcpy(copy, map, sizeof(struct sr_nat_mapping));
+      break;
     }
-    maps = maps->next;
+    map = map->next;
   }
+
+  if (map){
+    mapping->last_updated = time(NULL);
+  } else {
+    copy = NULL;
+  }
+
 
   pthread_mutex_unlock(&(nat->lock));
   return NULL;
