@@ -119,25 +119,28 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         ip_header->ip_src = ip_src;
         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
-        struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(lpm->gw.s_addr));
+        struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
         sr_ethernet_hdr_t* e_header = (sr_ethernet_hdr_t*) reply_packet;
         sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (reply_packet + sizeof(sr_ethernet_hdr_t));
         
         if (entry) {
-            memcpy(e_header->ether_dhost,entry->mac,6);
-            memcpy(e_header->ether_shost,interface->addr,6);
+            memcpy(e_header->ether_dhost ,entry->mac, 6);
+            memcpy(e_header->ether_shost, interface->addr, 6);
+
             ip_header->ip_ttl = ip_header->ip_ttl - 1;
             ip_header->ip_sum = 0;
             ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
-            sr_send_packet(sr,reply_packet,len,lpm->interface);
+
+            sr_send_packet(sr, reply_packet, len, lpm->interface);
             free(entry);
         } else {
-            memcpy(e_header->ether_shost,interface->addr,6);
+            memcpy(e_header->ether_shost, interface->addr, 6);
+
             struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), lpm->gw.s_addr, reply_packet, len, lpm->interface);
             handle_arpreq(req, sr);
         }
     }
-}/* end sr_send_icmp */
+}
 
 void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface){
     /*Initialize headers*/
