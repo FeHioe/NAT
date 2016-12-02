@@ -196,7 +196,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
   }
 
   if (map){
-    mapping->last_updated = time(NULL);
+    map->last_updated = time(NULL);
   } else {
     copy = NULL;
   }
