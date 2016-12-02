@@ -88,6 +88,8 @@ void *mfree(struct sr_nat_mapping * map){
   }
 
   free(map);
+
+  return NULL;
 }
 
 void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
