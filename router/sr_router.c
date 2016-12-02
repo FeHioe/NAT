@@ -165,6 +165,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 
     struct sr_rt * rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);;
     struct sr_nat_connection *con = NULL;
+    struct sr_nat_mapping *map = NULL;
 
     /*Checksum check*/
     uint16_t checksum = ip_header->ip_sum;
