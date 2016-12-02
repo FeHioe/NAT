@@ -163,8 +163,6 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /*Initialize headers*/
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
 
-    struct sr_rt * rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);;
-
     /*Checksum check*/
     uint16_t checksum = ip_header->ip_sum;
     ip_header->ip_sum = 0;
@@ -211,6 +209,8 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
                 mfree(map);
+
+                struct sr_rt * rt = check_routing_table(sr, ip_header);
                 sendIPPacket(sr, packet, len, rt);
             }
 
@@ -236,6 +236,8 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             tcp_header->tcp_sum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
 
             mfree(map);
+
+            struct sr_rt * rt = check_routing_table(sr, ip_header);
             sendIPPacket(sr, packet, len, rt);
             
         } 
@@ -261,7 +263,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 
                 if (map){
 
-                    rt = (struct sr_rt*)sr_find_routing_entry_int(sr, map->ip_int);
+                    struct sr_rt * rt = check_routing_table(sr, ip_header);
                     if (rt){
                         icmp_header->icmp_id = map->aux_int;
                         icmp_header->icmp_sum = 0;
@@ -303,16 +305,16 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 
                     mfree(map);
 
-                    rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
-                    if (rt != NULL){
+                    struct sr_rt * rt = check_routing_table(sr, ip_header);
+                    if (rt){
                         sendIPPacket(sr, packet, len, rt);
                     }
 
                 } else if (tcp_header->syn) {
 
-                    rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
+                    struct sr_rt * rt = check_routing_table(sr, ip_header);
 
-                    if (rt != NULL){
+                    if (rt){
                         map = sr_nat_waiting_mapping(&(sr->nat), ip_header->ip_src, ntohs(tcp_header->tcp_dst), nat_mapping_waiting, packet);
                     }
                 } 
