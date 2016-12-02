@@ -9,11 +9,7 @@
 #include "sr_protocol.h"
 #include "sr_router.h"
 
-int sr_nat_init(void *sr,
-                struct sr_nat *nat,
-                unsigned int icmp_query_timeout,
-                unsigned int tcp_established_timeout,
-                unsigned int tcp_transitory_timeout) {
+int sr_nat_init(void *sr, struct sr_nat *nat, unsigned int icmp_query_timeout, unsigned int tcp_established_timeout, unsigned int tcp_transitory_timeout) {
 
   assert(nat);
 
@@ -38,7 +34,7 @@ int sr_nat_init(void *sr,
   nat->tcp_established_timeout = tcp_established_timeout;
   nat->tcp_transitory_timeout = tcp_transitory_timeout;
   
-  nat->icmp_id = (unsigned short)(time(NULL));
+  nat->icmp_id = time(NULL);
   nat->tcp_id = 1024;
 
   return success;
@@ -155,8 +151,7 @@ void *sr_nat_timeout(void * sr_ptr) {  /* Periodic Timout handling */
 
 /* Get the mapping associated with given external port.
    You must free the returned structure if it is not NULL. */
-struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
-    uint16_t aux_ext, sr_nat_mapping_type type ) {
+struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat, uint16_t aux_ext, sr_nat_mapping_type type ) {
 
   pthread_mutex_lock(&(nat->lock));
 
@@ -185,8 +180,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat,
 
 /* Get the mapping associated with given internal (ip, port) pair.
    You must free the returned structure if it is not NULL. */
-struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
-  uint32_t ip_int, uint16_t aux_int, sr_nat_mapping_type type ) {
+struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat, uint32_t ip_int, uint16_t aux_int, sr_nat_mapping_type type ) {
 
   pthread_mutex_lock(&(nat->lock));
 
@@ -216,8 +210,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
 /* Insert a new mapping into the nat's mapping table.
    Actually returns a copy to the new mapping, for thread safety.
  */
-struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
-  uint32_t ip_int, uint16_t aux_int, sr_nat_mapping_type type ) {
+struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat, uint32_t ip_int, uint16_t aux_int, sr_nat_mapping_type type ) {
 
   pthread_mutex_lock(&(nat->lock));
 
@@ -262,11 +255,7 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   return ret_map;
 }
 
-void *sr_nat_waiting_mapping(struct sr_nat *nat,
-                             uint32_t ip_ext, 
-                             uint16_t aux_ext, 
-                             sr_nat_mapping_type type, 
-                             void * buf){
+void *sr_nat_waiting_mapping(struct sr_nat *nat, uint32_t ip_ext, uint16_t aux_ext, sr_nat_mapping_type type, void * buf){
 
     pthread_mutex_lock(&(nat->lock));
     
@@ -286,9 +275,7 @@ void *sr_nat_waiting_mapping(struct sr_nat *nat,
     return NULL;
 }
 
-struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat,
-                                                   void * buf,
-                                                   unsigned char internal){ 
+struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat, void * buf, unsigned char internal){ 
     pthread_mutex_lock(&(nat->lock));
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t *)buf;  
     sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t *)(buf+SIZE_IP);
