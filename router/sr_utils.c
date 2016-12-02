@@ -19,26 +19,27 @@ uint16_t cksum (const void *_data, int len) {
   return sum ? sum : 0xffff;
 }
 
-uint16_t sr_tcp_cksum(void * packet, unsigned int len){
-   unsigned int tcp_len = len-SIZE_IP;
-   unsigned int new_len = tcp_len+SIZE_PTCP+(tcp_len+SIZE_PTCP)%2;
-   sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)packet;
-   void * buf = calloc(new_len,1);
+uint16_t tcp_cksum(void *data, int len){
+   unsigned int length = len - sizeof(sr_ip_hdr_t);
+   unsigned int tcp_len = length + sizeof(sr_pseudo_tcp_hdr_t) + ((length + sizeof(sr_pseudo_tcp_hdr_t)) % 2);
+   
+   sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*) data;
+   void * pseudo = calloc(tcp_len, 1);
 
-   sr_tcp_pseudo_hdr_t * pseudo = (sr_tcp_pseudo_hdr_t*)buf;
-   pseudo->ip_src = ip_header->ip_src;
-   pseudo->ip_dst = ip_header->ip_dst;
-   pseudo->reserved = 0;
-   pseudo->ip_p = ip_header->ip_p;
-   pseudo->len = htons(tcp_len);
+   sr_tcp_pseudo_hdr_t * ptcp_headr = (sr_tcp_pseudo_hdr_t*) pseudo;
+   ptcp_headr->ip_src = ip_header->ip_src;
+   ptcp_headr->ip_dst = ip_header->ip_dst;
+   ptcp_headr->reserved = 0;
+   ptcp_headr->ip_p = ip_header->ip_p;
+   ptcp_headr->len = htons(length);
 
-   sr_tcp_hdr_t *tcp_hdr = (sr_tcp_hdr_t*)(buf+SIZE_PTCP);   
-   memcpy(buf+SIZE_PTCP,packet+SIZE_IP,tcp_len);
+   sr_tcp_hdr_t *tcp_hdr = (sr_tcp_hdr_t*)(pseudo + sizeof(sr_pseudo_tcp_hdr_t));   
+   memcpy(pseudo + sizeof(sr_pseudo_tcp_hdr_t), data + sizeof(sr_ip_hdr_t), length);
    tcp_hdr->tcp_sum = 0;
 
-   uint16_t ret = cksum(buf,new_len);
-   free(buf);
-   return ret;
+   uint16_t checksum = cksum(pseudo, tcp_len);
+   free(pseudo);
+   return checksum;
 }
 
 
