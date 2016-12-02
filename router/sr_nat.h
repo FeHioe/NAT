@@ -15,10 +15,23 @@ typedef enum {
 
 struct sr_nat_connection {
   /* add TCP connection state data members here */
-  uint32_t ip;
-  time_t last_updated;
-  int tcp_timeout; /* 0 for established and 1 for transitory */
-
+  uint32_t conn_ip;
+  uint8_t state;
+/*#define LISTEN 1*/
+#define SYN_SENT 2
+#define SYN_REC 3
+#define ESTAB1 4
+#define ESTAB2 5
+/*#define FIN_W1 6
+#define FIN_W2 7
+#define CLOSE_W 7*/
+#define CLOSING 8
+/*#define LAST_ACK 9
+#define TIME_W 10
+#define CLOSED 0*/
+  /*uint8_t ext_flags;
+  uint8_t int_flags;*/
+  time_t last_updated; /* use to timeout mappings */
   struct sr_nat_connection *next;
 };
 
@@ -31,21 +44,19 @@ struct sr_nat_mapping {
   time_t last_updated; /* use to timeout mappings */
   struct sr_nat_connection *conns; /* list of connections. null for ICMP */
   struct sr_nat_mapping *next;
-
-  void *packet; /* contained the packet that needs to be sent */
+  void *packet;
 };
 
 struct sr_nat {
   /* add any fields here */
   struct sr_nat_mapping *mappings;
-
-  unsigned short icmp;
-  unsigned short tcp;
-
-  unsigned int icmp_query_timeout;
-  unsigned int tcp_established_timeout;
-  unsigned int tcp_transitory_timeout;
-
+  unsigned int icmp_to;
+  unsigned int tcp_est_to;
+  unsigned int tcp_trans_to;
+  
+  unsigned short icmp_id;
+  unsigned short tcp_id;
+   
   /* threading */
   pthread_mutex_t lock;
   pthread_mutexattr_t attr;
@@ -54,9 +65,13 @@ struct sr_nat {
 };
 
 
-int   sr_nat_init(struct sr_nat *nat);     /* Initializes the nat */
+int   sr_nat_init(void *sr,
+                  struct sr_nat *nat,
+                  unsigned int icmp_timeout,
+                  unsigned int tcp_est_timeout,
+                  unsigned int tcp_trans_timeout);     /* Initializes the nat */
 int   sr_nat_destroy(struct sr_nat *nat);  /* Destroys the nat (free memory) */
-void *sr_nat_timeout(void *nat_ptr);  /* Periodic Timout */
+void *sr_nat_timeout(void *sr_ptr);  /* Periodic Timout */
 
 /* Get the mapping associated with given external port.
    You must free the returned structure if it is not NULL. */
@@ -73,5 +88,22 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat,
 struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat,
   uint32_t ip_int, uint16_t aux_int, sr_nat_mapping_type type );
 
+/* Insert a new mapping into the nat's mapping table.
+   You must free the returned structure if it is not NULL. */
+void *sr_nat_waiting_mapping(struct sr_nat *nat,
+  uint32_t ip_int, uint16_t aux_ext, sr_nat_mapping_type type, 
+  void * buf);
+  
+/* Insert a new connection into the nat's mapping table.
+   You must free the returned structure if it is not NULL. */
+struct sr_nat_mapping *sr_nat_insert_connection(struct sr_nat *nat,
+  uint32_t ip_int, uint16_t aux_int, uint16_t ip_ext);
+  
+/* Insert a new connection into the nat's mapping table.
+   You must free the returned structure if it is not NULL. */
+struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat,
+  void *buf, unsigned char internal);
+
+void * sr_free_mapping(struct sr_nat_mapping * map);
 
 #endif

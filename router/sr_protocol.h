@@ -40,11 +40,10 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
+
 #ifndef IP_MAXPACKET
 #define IP_MAXPACKET 65535
 #endif
-
-
 
 /* FIXME
  * ohh how lame .. how very, very lame... how can I ever go out in public
@@ -75,27 +74,12 @@
 #endif
 #define ICMP_DATA_SIZE 28
 
-
-struct sr_icmp_t8_hdr {
-  uint8_t icmp_type;
-  uint8_t icmp_code;
-  uint16_t icmp_sum;
-  uint16_t icmp_id;
-  uint16_t icmp_seq;
-  
-} __attribute__ ((packed)) ;
-typedef struct sr_icmp_t8_hdr sr_icmp_t8_hdr_t;
-
-struct sr_tcp_hdr {
-  uint16_t tcp_wdw;
-  uint16_t tcp_sum;
-  uint16_t tcp_ptr;
-  uint16_t tcp_src;
-  uint16_t tcp_dst;
-  uint32_t tcp_seq;
-  uint32_t tcp_ack;
-} __attribute__ ((packed)) ;
-typedef struct sr_tcp_hdr sr_tcp_hdr_t;
+#define SIZE_ETH sizeof(sr_ethernet_hdr_t)
+#define SIZE_IP sizeof(sr_ip_hdr_t)
+#define SIZE_ARP sizeof(sr_arp_hdr_t)
+#define SIZE_ICMP sizeof(sr_icmp_t3_hdr_t)
+#define SIZE_TCP sizeof(sr_tcp_hdr_t)
+#define SIZE_PTCP sizeof(sr_tcp_pseudo_hdr_t)
 
 /* Structure of a ICMP header
  */
@@ -106,6 +90,18 @@ struct sr_icmp_hdr {
   
 } __attribute__ ((packed)) ;
 typedef struct sr_icmp_hdr sr_icmp_hdr_t;
+
+/* Structure of a ICMP Echo header
+ */
+struct sr_icmp_t8_hdr {
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_sum;
+  uint16_t icmp_id;
+  uint16_t icmp_seq;
+  
+} __attribute__ ((packed)) ;
+typedef struct sr_icmp_t8_hdr sr_icmp_t8_hdr_t;
 
 
 /* Structure of a type3 ICMP header
@@ -121,17 +117,58 @@ struct sr_icmp_t3_hdr {
 } __attribute__ ((packed)) ;
 typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
 
-/* Structure of a type11 ICMP header
- */
-struct sr_icmp_t11_hdr {
-  uint8_t icmp_type;
-  uint8_t icmp_code;
-  uint16_t icmp_sum;
-  uint16_t unused;
-  uint8_t data[ICMP_DATA_SIZE];
 
+/* Structure of a TCP header
+ */
+struct sr_tcp_hdr {
+  uint16_t tcp_src;
+  uint16_t tcp_dst;
+  uint32_t tcp_seq;
+  uint32_t tcp_ack;
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  unsigned int tcp_ns:1;
+  unsigned int reserved:3;
+  unsigned int tcp_off:4;
+  unsigned int fin:1;
+  unsigned int syn:1;
+  unsigned int rst:1;
+  unsigned int psh:1;
+  unsigned int ack:1;
+  unsigned int urg:1;
+  unsigned int tcp_ece:1;
+  unsigned int tcp_cwr:1;
+#elif __BYTE_ORDER == __BIG_ENDIAN
+  unsigned int tcp_off:4;
+  unsigned int reserved:3;
+  unsigned int tcp_ns:1;
+  unsigned int tcp_cwr:1;
+  unsigned int tcp_ece:1;
+  unsigned int urg:1;
+  unsigned int ack:1;
+  unsigned int psh:1;
+  unsigned int rst:1;
+  unsigned int syn:1;
+  unsigned int fin:1;
+#else
+#error "Byte ordering ot specified " 
+#endif 
+  uint16_t tcp_wdw;
+  uint16_t tcp_sum;
+  uint16_t tcp_ptr;
 } __attribute__ ((packed)) ;
-typedef struct sr_icmp_t11_hdr sr_icmp_t11_hdr_t;
+typedef struct sr_tcp_hdr sr_tcp_hdr_t;
+
+
+/* Structure of a TCP-Pseudo header
+ */
+struct sr_tcp_pseudo_hdr {
+  uint32_t ip_src;
+  uint32_t ip_dst;
+  uint8_t reserved;
+  uint8_t ip_p;
+  uint16_t len;
+} __attribute__ ((packed)) ;
+typedef struct sr_tcp_pseudo_hdr sr_tcp_pseudo_hdr_t;
 
 
 /*
@@ -140,26 +177,26 @@ typedef struct sr_icmp_t11_hdr sr_icmp_t11_hdr_t;
 struct sr_ip_hdr
   {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-    unsigned int ip_hl:4;		/* header length */
-    unsigned int ip_v:4;		/* version */
+    unsigned int ip_hl:4;   /* header length */
+    unsigned int ip_v:4;    /* version */
 #elif __BYTE_ORDER == __BIG_ENDIAN
-    unsigned int ip_v:4;		/* version */
-    unsigned int ip_hl:4;		/* header length */
+    unsigned int ip_v:4;    /* version */
+    unsigned int ip_hl:4;   /* header length */
 #else
 #error "Byte ordering ot specified " 
 #endif 
-    uint8_t ip_tos;			/* type of service */
-    uint16_t ip_len;			/* total length */
-    uint16_t ip_id;			/* identification */
-    uint16_t ip_off;			/* fragment offset field */
-#define	IP_RF 0x8000			/* reserved fragment flag */
-#define	IP_DF 0x4000			/* dont fragment flag */
-#define	IP_MF 0x2000			/* more fragments flag */
-#define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
-    uint8_t ip_ttl;			/* time to live */
-    uint8_t ip_p;			/* protocol */
-    uint16_t ip_sum;			/* checksum */
-    uint32_t ip_src, ip_dst;	/* source and dest address */
+    uint8_t ip_tos;     /* type of service */
+    uint16_t ip_len;      /* total length */
+    uint16_t ip_id;     /* identification */
+    uint16_t ip_off;      /* fragment offset field */
+#define IP_RF 0x8000      /* reserved fragment flag */
+#define IP_DF 0x4000      /* dont fragment flag */
+#define IP_MF 0x2000      /* more fragments flag */
+#define IP_OFFMASK 0x1fff   /* mask for fragmenting bits */
+    uint8_t ip_ttl;     /* time to live */
+    uint8_t ip_p;     /* protocol */
+    uint16_t ip_sum;      /* checksum */
+    uint32_t ip_src, ip_dst;  /* source and dest address */
   } __attribute__ ((packed)) ;
 typedef struct sr_ip_hdr sr_ip_hdr_t;
 
@@ -182,8 +219,6 @@ typedef struct sr_ethernet_hdr sr_ethernet_hdr_t;
 
 enum sr_ip_protocol {
   ip_protocol_icmp = 0x0001,
-  ip_protocol_tcp = 0x0006,
-  ip_protocol_udp = 0x0011,
 };
 
 enum sr_ethertype {
