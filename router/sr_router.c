@@ -164,8 +164,6 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
 
     struct sr_rt * rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);;
-    struct sr_nat_connection *con = NULL;
-    struct sr_nat_mapping *map = NULL;
 
     /*Checksum check*/
     uint16_t checksum = ip_header->ip_sum;
@@ -226,8 +224,8 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 return;
             } 
 
-            map = sr_nat_insert_mapping(&(sr->nat), ip_header->ip_src, tcp_header->tcp_src, nat_mapping_tcp);
-            con = sr_nat_update_connection(&(sr->nat), packet + sizeof(sr_ethernet_hdr_t), 1);
+            struct sr_nat_mapping *map = sr_nat_insert_mapping(&(sr->nat), ip_header->ip_src, tcp_header->tcp_src, nat_mapping_tcp);
+            struct sr_nat_connection *connection = sr_nat_update_connection(&(sr->nat), packet + sizeof(sr_ethernet_hdr_t), 1);
 
             struct sr_if *external = sr_get_interface(sr, "eth2");
             ip_header->ip_src = external->ip;
@@ -259,7 +257,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             }
 
             if (icmp_header->icmp_type == 0 && icmp_header->icmp_code == 0){
-                map = sr_nat_lookup_external(&(sr->nat), icmp_header->icmp_id, nat_mapping_icmp);
+                struct sr_nat_mapping *map = sr_nat_lookup_external(&(sr->nat), icmp_header->icmp_id, nat_mapping_icmp);
                 
                 if (map){
 
@@ -292,8 +290,8 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             if (ntohs(tcp_header->tcp_dst) < 1024){
                 sr_send_icmp(sr, packet, len, 3, 3, 0);
             } else {
-                map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
-                con = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 0);
+                struct sr_nat_mapping *map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
+                struct sr_nat_connection *connection = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 0);
 
                 if (map){
                     ip_header->ip_dst = map->ip_int;
