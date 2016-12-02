@@ -67,7 +67,8 @@ void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct s
     }
 }
 
-void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code){
+sr_send_icmp(sr, packet, len, 3, 3, 0);
+void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code, uint32_t ip_src){
     
     uint8_t* reply_packet = malloc(len + sizeof(sr_icmp_t8_hdr_t));
     memset(reply_packet, 0, len + sizeof(sr_icmp_t8_hdr_t));
@@ -106,6 +107,9 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         struct sr_if* interface = sr_get_interface(sr, lpm->interface);
         memcpy(e_header->ether_shost, interface->addr, 6);
         e_header->ether_type = ethertype_ip;
+        if (ip_src == 0){
+            ip_src = interface->ip;
+        }
 
         ip_header->ip_hl = 5;
         ip_header->ip_v = 4;
@@ -116,28 +120,32 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         ip_header->ip_p = 1;
         ip_header->ip_sum = 0;
         ip_header->ip_dst = ip_header->ip_src;
-        ip_header->ip_src = interface->ip;
+        ip_header->ip_src = ip_src;
         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
-        struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
+        struct sr_arpentry* entry;
+        pthread_mutex_lock(&(sr->cache.lock));
+        entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(lpm->gw.s_addr));
+        sr_ethernet_hdr_t* e_header = (sr_ethernet_hdr_t*) reply_packet;
+        sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (reply_packet + sizeof(sr_ethernet_hdr_t));
+        
         if (entry) {
+            interface = sr_get_interface(sr, lpm->interface);
             memcpy(e_header->ether_dhost, entry->mac, 6);
             memcpy(e_header->ether_shost, interface->addr, 6);
-
             ip_header->ip_ttl = ip_header->ip_ttl - 1;
             ip_header->ip_sum = 0;
             ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
-
             sr_send_packet(sr, reply_packet, len, lpm->interface);
             free(entry);
         } else {
             memcpy(e_header->ether_shost, interface->addr, 6);
-
             struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), lpm->gw.s_addr, reply_packet, len, lpm->interface);
             handle_arpreq(req, sr);
         }
+        pthread_mutex_unlock(&(sr->cache.lock));
     }
-}
+}/* end sr_send_icmp */
 
 void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface){
     /*Initialize headers*/
@@ -159,9 +167,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /* Check for internal and external */
     if (strcmp(interface, "eth1") == 0){ /* Internal */
         if (ip_destined){
-            sr_send_icmp(sr, packet, len, 3, 3);
+            sr_send_icmp(sr, packet, len, 3, 3, 0);
         } else if (ip_header->ip_ttl <= 1){
-            sr_send_icmp(sr, packet, len, 11, 0);
+            sr_send_icmp(sr, packet, len, 11, 0,0);
         } else if (ip_header->ip_p == 1) { /* ICMP */
 
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -223,7 +231,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         } 
     } else if (strcmp(interface, "eth2") == 0){ /* External */
         if (ip_header->ip_ttl <= 1){
-            sr_send_icmp(sr, packet, len, 11, 0);
+            sr_send_icmp(sr, packet, len, 11, 0,0);
         } else if(ip_header->ip_p == 1) { /* ICMP */
 
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -270,7 +278,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             } 
 
             if (ntohs(tcp_header->tcp_dst) < 1024){
-                sr_send_icmp(sr, packet, len, 3, 3);
+                sr_send_icmp(sr, packet, len, 3, 3, 0);
             } else {
                 struct sr_nat_mapping *map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
                 /* update connections */
