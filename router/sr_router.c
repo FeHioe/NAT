@@ -92,12 +92,6 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
     }
     
     if(lpm){
-        int icmp_size;
-        if (len < sizeof(sr_ethernet_hdr_t) + ICMP_DATA_SIZE){
-            icmp_size = len - sizeof(sr_ethernet_hdr_t);
-        } else {
-            icmp_size = ICMP_DATA_SIZE;
-        }
         memcpy(icmp_header->data, packet + sizeof(sr_ethernet_hdr_t), ICMP_DATA_SIZE);
         icmp_header->unused = 0;
         icmp_header->next_mtu = 0;
@@ -118,16 +112,14 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         ip_header->ip_tos = 0;
         ip_header->ip_len = htons(len - sizeof(sr_ethernet_hdr_t));
         ip_header->ip_off = htons(IP_DF);
-        ip_header->ip_ttl = INIT_TTL;
+        ip_header->ip_ttl = 64;
         ip_header->ip_p = 1;
         ip_header->ip_sum = 0;
         ip_header->ip_dst = ip_header->ip_src;
         ip_header->ip_src = ip_src;
         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
-        struct sr_arpentry* entry;
-        pthread_mutex_lock(&(sr->cache.lock));
-        entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(lpm->gw.s_addr));
+        struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(lpm->gw.s_addr));
         sr_ethernet_hdr_t* e_header = (sr_ethernet_hdr_t*) reply_packet;
         sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (reply_packet + sizeof(sr_ethernet_hdr_t));
         
@@ -144,7 +136,6 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
             struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), lpm->gw.s_addr, reply_packet, len, lpm->interface);
             handle_arpreq(req, sr);
         }
-        pthread_mutex_unlock(&(sr->cache.lock));
     }
 }/* end sr_send_icmp */
 
