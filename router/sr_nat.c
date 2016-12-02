@@ -70,55 +70,67 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
 
 }
 
-void *sr_nat_timeout(void * sr_ptr) {  /* Periodic Timout handling */
-  struct sr_instance *sr = (struct sr_instance *)sr_ptr;
+void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
+  struct sr_instance *sr = (struct sr_instance *)nat_ptr;
   struct sr_nat *nat = &(sr->nat);
   while (1) {
     sleep(1.0);
     pthread_mutex_lock(&(nat->lock));
 
     time_t curtime = time(NULL);
+
     /* handle periodic tasks here */
-    struct sr_nat_mapping *maps = nat->mappings;
-    struct sr_nat_mapping *prev = NULL;
-    while(maps != NULL){ /*TODO: SEND ICMP??*/
-      double diff = difftime(curtime, maps->last_updated);
-        
-      if (maps->type == nat_mapping_icmp && diff > nat->icmp_query_timeout){
-          if(prev == NULL){
-            nat->mappings = NULL;
-          } else {
-            prev->next = maps->next;
+    struct sr_nat_mapping *map = nat->mappings;
+    struct sr_nat_mappinh *temp = NULL;
+
+    while(map){ 
+      double elapsed = difftime(curtime, map->last_updated);
+
+      if (map->type == nat_mapping_icmp && nat->icmp_query_timeout < elapsed){
+
+        if (temp){
+          temp->next = map->next;  
+        } else {
+          nat->mappings = NULL;
+        }
+
+        /* free mappings */
+        mfree(map);
+
+      } else if (map->type == nat_mapping_waiting && 6.0 <= elapsed){
+
+        struct sr_nat_mapping *external_map = sr_nat_lookup_external(nat, map->aux_ext, nat_mapping_tcp);
+        if (external_map){
+          unsigned char exists = 0;
+          struct sr_nat_connection *connection = map->conns;
+
+          while (connection) {
+            if (connection->ip == maps->ip_ext){
+              exists = 1;
+              break;
+            }
+            connection = connection->next;
           }
-          sr_free_mapping(maps);
-      } else if (maps->type == nat_mapping_waiting && diff >= 6.0){
-          struct sr_nat_mapping *targ_map = sr_nat_lookup_external(nat,
-                                                                  maps->aux_ext,
-                                                                  nat_mapping_tcp);
-          if(targ_map == NULL){
-              sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
-          } else {
-              unsigned char found = 0;
-              struct sr_nat_connection *con = maps->conns;
-              for (con = maps->conns; con != NULL; con = con->next) {
-                  if (con->conn_ip == maps->ip_ext){
-                     found = 1;
-                     break;
-                  } 
-              }
-              if (!found){
-                  sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
-              }
+
+          if (exists == 0){
+            sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
           }
-          if(prev == NULL){
-            nat->mappings = NULL;
-          } else {
-            prev->next = maps->next;
-          }
-          sr_free_mapping(maps);
+
+        } else {
+          sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
+        }
+
+        if (temp){
+          temp->next = map->next;  
+        } else {
+          nat->mappings = NULL;
+        }
+
+        mfree(maps);
+
       }else if (maps->type == nat_mapping_tcp){
           if (diff >= nat->tcp_established_timeout){
-              sr_free_mapping(maps);
+              mfree(maps);
           } else {
               unsigned char keep = 0;
               struct sr_nat_connection *con = maps->conns;
@@ -135,7 +147,7 @@ void *sr_nat_timeout(void * sr_ptr) {  /* Periodic Timout handling */
               }
               
               if (!keep){
-                  sr_free_mapping(maps);
+                  mfree(maps);
               }
           }
       }
@@ -356,7 +368,7 @@ struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat, void * bu
     return copy;
 }
 
-void * sr_free_mapping(struct sr_nat_mapping * map){
+void *mfree(struct sr_nat_mapping * map){
    if (map->conns != NULL){
       struct sr_nat_connection *con = map->conns;
       for (con = map->conns; con != NULL; con = con->next) {
