@@ -47,6 +47,7 @@ void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct s
     
     struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
     if (entry) {
+        struct sr_if* interface = sr_get_interface(sr, lpm->interface);
         memcpy(e_header->ether_dhost, entry->mac, 6);
         memcpy(e_header->ether_shost, interface->addr, 6);
 
@@ -54,7 +55,6 @@ void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct s
         ip_header->ip_sum = 0;
         ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
 
-        struct sr_if* interface = sr_get_interface(sr, lpm->interface);
         sr_send_packet(sr, packet, len, lpm->interface);
         free(entry);
 
