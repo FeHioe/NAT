@@ -45,6 +45,11 @@ extern char* optarg;
 #define DEFAULT_RTABLE "rtable"
 #define DEFAULT_TOPO 0
 
+/* timeout values */
+#define DEFAULT_ICMP_QUERY 60
+#define DEFAULT_TCP_ESTABLISHED 7440
+#define DEFAULT_TCP_TRANSITORY 300
+
 static void usage(char* );
 static void sr_init_instance(struct sr_instance* );
 static void sr_destroy_instance(struct sr_instance* );
@@ -65,15 +70,17 @@ int main(int argc, char **argv)
     unsigned int port = DEFAULT_PORT;
     unsigned int topo = DEFAULT_TOPO;
     char *logfile = 0;
+    struct sr_instance sr;
+
     unsigned short mode = 0;
     unsigned int nat_icmpTO = 60;
     unsigned int nat_tcpEstTO = 7440;
     unsigned int nat_tcpTransTO = 300;
-    struct sr_instance sr;
+
 
     printf("Using %s\n", VERSION_INFO);
 
-    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:nI:E:R:")) != EOF)
+    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:I:E:R:n:")) != EOF)
     {
         switch (c)
         {
