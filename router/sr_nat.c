@@ -71,17 +71,23 @@ int sr_nat_destroy(struct sr_nat *nat) {  /* Destroys the nat (free memory) */
 }
 
 void *mfree(struct sr_nat_mapping * map){
-   if (map->conns != NULL){
-      struct sr_nat_connection *con = map->conns;
-      for (con = map->conns; con != NULL; con = con->next) {
-          free(con);
-      }
-   }
-   if (map->packet != NULL){
-     free(map->packet);
-   }
-   free(map);
-   return NULL;
+  /* free mappings */
+  if (map->conns) {
+    struct sr_nat_connection *connection = map->conns;
+    while (connection){
+      struct sr_nat_connection *free_con = connection;
+      connection = connection->next;
+
+      free(free_con);
+    }
+  }
+
+  /* free packet */
+  if (map->packet){
+    free(map->packet);
+  }
+
+  free(map);
 }
 
 void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
