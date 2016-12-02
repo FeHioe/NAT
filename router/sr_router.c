@@ -41,6 +41,40 @@ void sr_ForwardPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len,
 void handle_arpreq(struct sr_arpreq *sr_req, struct sr_instance *sr);
 void create_send_ICMP_packet(struct sr_packet *packet, struct sr_instance *sr, int type, int code);
 
+void sendIPPacket(struct sr_instance* sr,
+               uint8_t* packet, 
+               unsigned int len, 
+               struct sr_rt* rt){
+    struct sr_if* iface = sr_get_interface(sr, rt->interface);
+    struct sr_arpentry* entry;
+    pthread_mutex_lock(&(sr->cache.lock));
+    entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(rt->gw.s_addr));
+    sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*) packet;
+    sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (packet+SIZE_ETH);
+    
+    if (entry) {
+        fprintf(stderr,"Found cache hit\n");
+        iface = sr_get_interface(sr, rt->interface);
+        memcpy(eth_header->ether_dhost,entry->mac,6);
+        memcpy(eth_header->ether_shost,iface->addr,6);
+        ip_header->ip_ttl = ip_header->ip_ttl - 1;
+        ip_header->ip_sum = 0;
+        ip_header->ip_sum = cksum((uint8_t *)ip_header,SIZE_IP);
+        sr_send_packet(sr,packet,len,rt->interface);
+        free(entry);
+    } else {
+        fprintf(stderr,"Adding ARP Request\n");
+        memcpy(eth_header->ether_shost,iface->addr,6);
+        struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), 
+                                                     (uint32_t)(rt->gw.s_addr), 
+                                                     packet, 
+                                                     len, 
+                                                     rt->interface);
+        sr_handle_arpreq(sr,req);
+    }
+    pthread_mutex_unlock(&(sr->cache.lock));
+} /*end sendIPPacket */
+
 void sr_send_icmp(struct sr_instance* sr,
         uint8_t *buf,
         unsigned int len, 
@@ -95,9 +129,6 @@ void sr_send_icmp(struct sr_instance* sr,
         ip_header->ip_src = ip_src;
         ip_header->ip_sum = cksum((uint8_t*)(ip_header),SIZE_IP);
       
-        sendIPPacket(sr,packet,len,rt);
-    
-        struct sr_if* iface = sr_get_interface(sr, rt->interface);
         struct sr_arpentry* entry;
         pthread_mutex_lock(&(sr->cache.lock));
         entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(rt->gw.s_addr));
