@@ -105,7 +105,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           struct sr_nat_connection *connection = map->conns;
 
           while (connection) {
-            if (connection->conn_ip == maps->ip_ext){
+            if (connection->conn_ip == map->ip_ext){
               exists = 1;
               break;
             }
@@ -113,11 +113,11 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           }
 
           if (exists == 0){
-            sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
+            sr_send_icmp(sr, map->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
           }
 
         } else {
-          sr_send_icmp(sr, maps->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
+          sr_send_icmp(sr, map->packet, SIZE_ETH+SIZE_IP+SIZE_TCP, 3, 3, 0);
         }
 
         if (temp){
@@ -126,16 +126,16 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           nat->mappings = NULL;
         }
 
-        mfree(maps);
+        mfree(map);
 
-      }else if (maps->type == nat_mapping_tcp){
+      }else if (map->type == nat_mapping_tcp){
           if (diff >= nat->tcp_established_timeout){
-              mfree(maps);
+              mfree(map);
           } else {
               unsigned char keep = 0;
-              struct sr_nat_connection *con = maps->conns;
-              struct sr_nat_connection *prev_con = maps->conns;
-              for (con = maps->conns; con != NULL; con = con->next) {
+              struct sr_nat_connection *con = map->conns;
+              struct sr_nat_connection *prev_con = map->conns;
+              for (con = map->conns; con != NULL; con = con->next) {
                   unsigned int timeout = ((con->state == ESTAB2) ? nat->tcp_established_timeout : nat->tcp_transitory_timeout);
                   if (difftime(curtime, con->last_updated) >= timeout){
                      prev_con->next = con->next;
@@ -147,13 +147,13 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
               }
               
               if (!keep){
-                  mfree(maps);
+                  mfree(map);
               }
           }
       }
       
-      prev = maps;
-      maps = maps->next;
+      prev = map;
+      map = map->next;
     }
 
     pthread_mutex_unlock(&(nat->lock));
