@@ -191,13 +191,14 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat, uint16_t aux_e
 
   /* handle lookup here, malloc and assign to copy. */
   struct sr_nat_mapping *copy = NULL;
-  struct sr_nat_mapping *maps = nat->mappings;
+  struct sr_nat_mapping *map = nat->mappings;
 
-  while(maps){
-    if (maps->aux_ext == aux_ext && maps->type == type){
+  while(map){
+    if (map->aux_ext == aux_ext && map->type == type){
       copy = malloc(sizeof(struct sr_nat_mapping));
-      memcpy(copy,maps,sizeof(struct sr_nat_mapping));
-      if (maps->conns){
+      memcpy(copy, map, sizeof(struct sr_nat_mapping));
+
+      if (map->conns){
         copy->conns = NULL;
       }
       copy->packet = NULL;
@@ -205,7 +206,7 @@ struct sr_nat_mapping *sr_nat_lookup_external(struct sr_nat *nat, uint16_t aux_e
       pthread_mutex_unlock(&(nat->lock));
       return copy;
     }
-    maps = maps->next;
+    map = map->next;
   }
 
   pthread_mutex_unlock(&(nat->lock));
@@ -220,13 +221,14 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat, uint32_t ip_in
 
   /* handle lookup here, malloc and assign to copy. */
   struct sr_nat_mapping *copy = NULL;
-  struct sr_nat_mapping *maps = nat->mappings;
+  struct sr_nat_mapping *map = nat->mappings;
 
-  while(maps){
-    if (maps->ip_int == ip_int && maps->aux_int == aux_int && maps->type == type){
+  while(map){
+    if (map->ip_int == ip_int && map->aux_int == aux_int && map->type == type){
       copy = malloc(sizeof(struct sr_nat_mapping));
-      memcpy(copy,maps,sizeof(struct sr_nat_mapping));
-      if (maps->conns){
+      memcpy(copy, map, sizeof(struct sr_nat_mapping));
+
+      if (map->conns){
         copy->conns = NULL;
       }
       copy->packet = NULL;
@@ -234,7 +236,7 @@ struct sr_nat_mapping *sr_nat_lookup_internal(struct sr_nat *nat, uint32_t ip_in
       pthread_mutex_unlock(&(nat->lock));
       return copy;
     }
-    maps = maps->next;
+    map = map->next;
   }
 
   pthread_mutex_unlock(&(nat->lock));
@@ -252,41 +254,47 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat, uint32_t ip_int
   struct sr_nat_mapping *mapping = NULL;
   mapping = sr_nat_lookup_internal(nat, ip_int, aux_int, type);
   
-  if (mapping != NULL){
+  if (mapping){
     return mapping;
   }
   
   mapping = malloc(sizeof(struct sr_nat_mapping));
+  mapping->type = type;
   mapping->ip_int = ip_int;
-  mapping->conns = NULL;
-  mapping->packet = NULL;
   mapping->aux_int = aux_int;
   mapping->last_updated = time(NULL);
-  mapping->type = type;
+  mapping->conns = NULL;
+  mapping->packet = NULL;
   mapping->next = nat->mappings;
   
   if (type == nat_mapping_icmp){
+
     mapping->aux_ext = nat->icmp_id;
     nat->icmp_id += 1;
+
   } else {
+
     mapping->aux_ext = nat->tcp_id;
     nat->tcp_id += 1;
+
     if (nat->tcp_id == 0){
       nat->tcp_id = 1024;
     }
+
   }
   
   nat->mappings = mapping;
 
- struct sr_nat_mapping *ret_map = malloc(sizeof(struct sr_nat_mapping));
- memcpy(ret_map,mapping,sizeof(struct sr_nat_mapping));
- if (mapping->conns != NULL){
-    ret_map->conns = NULL;
+ struct sr_nat_mapping *copy = malloc(sizeof(struct sr_nat_mapping));
+ memcpy(copy, mapping, sizeof(struct sr_nat_mapping));
+
+ if (mapping->conns){
+    copy->conns = NULL;
  }
- ret_map->packet = NULL;
+ copy->packet = NULL;
 
   pthread_mutex_unlock(&(nat->lock));
-  return ret_map;
+  return copy;
 }
 
 void *sr_nat_waiting_mapping(struct sr_nat *nat, uint32_t ip_ext, uint16_t aux_ext, sr_nat_mapping_type type, void * buf){
