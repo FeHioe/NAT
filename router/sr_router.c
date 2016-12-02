@@ -238,7 +238,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             } 
 
             struct sr_nat_mapping *map = sr_nat_insert_mapping(&(sr->nat), ip_header->ip_src, tcp_header->tcp_src, nat_mapping_tcp);
-            struct sr_nat_connection *connection = sr_nat_update_connection(&(sr->nat), packet + sizeof(sr_ethernet_hdr_t), 1);
+            /* update connections */
 
             struct sr_if *external = sr_get_interface(sr, "eth2");
             ip_header->ip_src = external->ip;
@@ -306,7 +306,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 sr_send_icmp(sr, packet, len, 3, 3, 0);
             } else {
                 struct sr_nat_mapping *map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
-                struct sr_nat_connection *connection = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 0);
+                /* update connections */
 
                 if (map){
                     ip_header->ip_dst = map->ip_int;
