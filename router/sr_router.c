@@ -298,10 +298,10 @@ void natHandleIPPacket(struct sr_instance* sr,
 }/* end natHandleIPPacket */
 
 void sr_init(struct sr_instance* sr, 
-             unsigned short mode,
-             unsigned int icmp_timeout,
-             unsigned int tcp_est_timeout,
-             unsigned int tcp_trans_timeout)
+             unsigned short nat_check,
+             unsigned int icmp_query_timeout,
+             unsigned int tcp_established_timeout,
+             unsigned int tcp_transitory_timeout)
 {
     /* REQUIRES */
     assert(sr);
@@ -318,10 +318,9 @@ void sr_init(struct sr_instance* sr,
     pthread_create(&thread, &(sr->attr), sr_arpcache_timeout, sr);
 
     /* Add initialization code here! */
-    sr->mode = mode;
-    if (mode == 1){
-        fprintf(stderr,"Nat mode enabled!\n");
-        sr_nat_init(sr, &(sr->nat), icmp_timeout, tcp_est_timeout, tcp_trans_timeout);
+    sr->is_nat = nat_check;
+    if (nat_check == 1){
+        sr_nat_init(sr, &(sr->nat), icmp_query_timeout, tcp_established_timeout, tcp_transitory_timeout);
     }
 
 } /* -- sr_init -- */
