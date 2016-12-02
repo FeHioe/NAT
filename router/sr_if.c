@@ -31,12 +31,10 @@ struct sr_if *sr_get_interface_from_ip(struct sr_instance* sr, uint32_t ip)
     struct sr_if* if_walker = 0;
     if_walker = sr->if_list;
     fprintf(stderr,"searching for %d = ",ip);
-    print_addr_ip_int(ip);
     
     while(if_walker)
     {
         fprintf(stderr,"Comparing to %d = ", if_walker->ip);
-        print_addr_ip_int(if_walker->ip);
         if (if_walker->ip == ip){
             return if_walker;
         }
