@@ -329,6 +329,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 
                     if (lpm){
 
+                        struct sr_nat *nat = &(sr->nat);
                         pthread_mutex_lock(&(nat->lock));
                         
                         struct sr_nat_mapping *mapping = malloc(sizeof(struct sr_nat_mapping));
