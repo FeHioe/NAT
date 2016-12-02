@@ -207,3 +207,22 @@ struct sr_rt *check_routing_table(struct sr_instance *sr, sr_ip_hdr_t *ip_header
    
     }
   } /* -- check_routing_table  -- */
+
+struct sr_rt* sr_find_routing_entry_int(struct sr_instance* sr, uint32_t ip)
+{
+    struct sr_rt* rt = sr->routing_table;
+    struct sr_rt *match = NULL; 
+    uint32_t msk = 0;
+    fprintf(stderr,"Finding LPM for %u \n", ip);
+    while (rt != NULL) {
+        msk = rt->mask.s_addr;
+        if ((ip & msk) == (rt->dest.s_addr & msk)) {
+            if (match == NULL || (msk > match->mask.s_addr)) {
+                fprintf(stderr,"Found match %u \n", rt->gw.s_addr);
+                match = rt;
+            }
+        }
+        rt = rt->next;
+    }
+    return match;
+} /* -- sr_find_routing_entry -- */

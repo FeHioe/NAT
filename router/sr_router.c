@@ -41,6 +41,100 @@ void sr_ForwardPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len,
 void handle_arpreq(struct sr_arpreq *sr_req, struct sr_instance *sr);
 void create_send_ICMP_packet(struct sr_packet *packet, struct sr_instance *sr, int type, int code);
 
+void sendIPPacket(struct sr_instance* sr,
+               uint8_t* packet, 
+               unsigned int len, 
+               struct sr_rt* rt){
+    struct sr_if* iface = sr_get_interface(sr, rt->interface);
+    struct sr_arpentry* entry;
+    pthread_mutex_lock(&(sr->cache.lock));
+    entry = sr_arpcache_lookup(&sr->cache, (uint32_t)(rt->gw.s_addr));
+    sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*) packet;
+    sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*) (packet+SIZE_ETH);
+    
+    if (entry) {
+        fprintf(stderr,"Found cache hit\n");
+        iface = sr_get_interface(sr, rt->interface);
+        memcpy(eth_header->ether_dhost,entry->mac,6);
+        memcpy(eth_header->ether_shost,iface->addr,6);
+        ip_header->ip_ttl = ip_header->ip_ttl - 1;
+        ip_header->ip_sum = 0;
+        ip_header->ip_sum = cksum((uint8_t *)ip_header,SIZE_IP);
+        sr_send_packet(sr,packet,len,rt->interface);
+        free(entry);
+    } else {
+        fprintf(stderr,"Adding ARP Request\n");
+        memcpy(eth_header->ether_shost,iface->addr,6);
+        struct sr_arpreq *req = sr_arpcache_queuereq(&(sr->cache), 
+                                                     (uint32_t)(rt->gw.s_addr), 
+                                                     packet, 
+                                                     len, 
+                                                     rt->interface);
+        sr_handle_arpreq(sr,req);
+    }
+    pthread_mutex_unlock(&(sr->cache.lock));
+} /*end sendIPPacket */
+
+
+void sr_send_icmp(struct sr_instance* sr,
+        uint8_t *buf,
+        unsigned int len, 
+        uint8_t type, 
+        uint8_t code,
+        uint32_t ip_src){
+  fprintf(stderr,"Send ICMP type %d code %d to\n",type, code);
+
+    uint8_t* packet = malloc(len+SIZE_ICMP);
+    memset(packet,0,len+SIZE_ICMP);
+    memcpy(packet,buf,len);
+    sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*) packet;
+    sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(packet+SIZE_ETH);
+    sr_icmp_t3_hdr_t* icmp_header = (sr_icmp_t3_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
+    struct sr_rt* rt = sr_find_routing_entry_int(sr, ip_header->ip_src);
+    
+    if(rt){
+        fprintf(stderr,"Found route %s\n",rt->interface);
+        struct sr_if* iface = sr_get_interface(sr, rt->interface);
+
+        if(type !=0 || code != 0){
+            int data_size;
+            if (len < SIZE_ETH+ICMP_DATA_SIZE){
+                data_size = len-SIZE_ETH;
+            } else {
+                data_size = ICMP_DATA_SIZE;
+            }
+            fprintf(stderr,"ICMP data size = %d", data_size);
+            memcpy(icmp_header->data,buf+SIZE_ETH,data_size);
+            icmp_header->unused = 0;
+            icmp_header->next_mtu = 0;
+            len = SIZE_ETH+SIZE_IP+SIZE_ICMP;
+        }
+        icmp_header->icmp_type = type;
+        icmp_header->icmp_code = code;
+        icmp_header->icmp_sum = 0;
+        icmp_header->icmp_sum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
+        memcpy(eth_header->ether_shost,iface->addr,6);
+        eth_header->ether_type = htons(0x0800);
+        if (ip_src == 0){
+            ip_src = iface->ip;
+        }
+        ip_header->ip_hl = 5;
+        ip_header->ip_v = 4;
+        ip_header->ip_tos = 0;
+        ip_header->ip_len = htons(len-SIZE_ETH);
+        /*ip_header->ip_id = ip_header->ip_id*/
+        ip_header->ip_off = htons(IP_DF);
+        ip_header->ip_ttl = INIT_TTL;
+        ip_header->ip_p = 1;
+        ip_header->ip_sum = 0;
+        ip_header->ip_dst = ip_header->ip_src;
+        ip_header->ip_src = ip_src;
+        ip_header->ip_sum = cksum((uint8_t*)(ip_header),SIZE_IP);
+      
+        sendIPPacket(sr,packet,len,rt);
+    }
+}/* end sr_send_icmp */
+
 void natHandleIPPacket(struct sr_instance* sr, 
         uint8_t* packet,
         unsigned int len, 
