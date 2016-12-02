@@ -160,14 +160,11 @@ void sr_send_icmp(struct sr_instance* sr,
 }/* end sr_send_icmp */
 
 void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface){
-    
-    struct sr_if * rec_iface = sr_get_interface(sr, interface);
     sr_ip_hdr_t * ip_header = (sr_ip_hdr_t *)(packet+SIZE_ETH);
     struct sr_if *tgt_iface = sr_get_interface_from_ip(sr,ip_header->ip_dst);
     struct sr_rt * rt = NULL;
     struct sr_nat_mapping *map = NULL;
     struct sr_nat_connection *con = NULL;
-    /*struct sr_if *int_if = sr_get_interface(sr,"eth1");*/
     struct sr_if *ext_if = sr_get_interface(sr,"eth2");
 
     uint16_t incm_cksum = ip_header->ip_sum;
@@ -177,10 +174,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     
     if (calc_cksum != incm_cksum){
         fprintf(stderr,"Bad checksum\n");
-    } else if (strcmp(rec_iface->name, "eth1") == 0){ /*INTERNAL*/
+    } else if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
         rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
         if (tgt_iface != NULL || rt == NULL){
-            /*(handleIPPacket(sr, packet, len, rec_iface);*/
             sr_send_icmp(sr, packet, len, 3, 3, 0);
         } else if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
@@ -237,7 +233,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 sendIPPacket(sr, packet, len, rt);
             }
         }
-    } else if (strcmp(rec_iface->name, "eth2") == 0){ /*EXTERNAL*/
+    } else if (strcmp(interface, "eth2") == 0){ /*EXTERNAL*/
         if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
             sr_send_icmp(sr, packet, len, 11, 0,0);
