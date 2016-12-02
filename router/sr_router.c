@@ -328,7 +328,22 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                     struct sr_rt * lpm = check_routing_table(sr, ip_header);
 
                     if (lpm){
-                        map = sr_nat_waiting_mapping(&(sr->nat), ip_header->ip_src, ntohs(tcp_header->tcp_dst), nat_mapping_waiting, packet);
+
+                        pthread_mutex_lock(&(nat->lock));
+                        
+                        struct sr_nat_mapping *mapping = malloc(sizeof(struct sr_nat_mapping));
+                        mapping->ip_ext = ip_header->ip_src;
+                        mapping->aux_ext = ntohs(tcp_header->tcp_dst);
+                        mapping->type = nat_mapping_waiting;
+                        mapping->last_updated = time(NULL);
+                        mapping->conns = NULL;                            
+                        mapping->packet = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_tcp_hdr_t));
+                        memcpy(mapping->packet, packet, sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_tcp_hdr_t));
+                        mapping->next = nat->mappings;
+                        nat->mappings = mapping;
+
+                        pthread_mutex_unlock(&(nat->lock));
+
                     }
                 } 
             }

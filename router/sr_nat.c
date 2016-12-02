@@ -299,26 +299,6 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat, uint32_t ip_int
 
 /* ---------------------------------------------------------- */
 
-void *sr_nat_waiting_mapping(struct sr_nat *nat, uint32_t ip_ext, uint16_t aux_ext, sr_nat_mapping_type type, void * buf){
-
-    pthread_mutex_lock(&(nat->lock));
-    
-    struct sr_nat_mapping *mapping = NULL;
-    mapping = malloc(sizeof(struct sr_nat_mapping));
-    mapping->ip_ext = ip_ext;
-    mapping->conns = NULL;
-    mapping->aux_ext = aux_ext;
-    mapping->last_updated = time(NULL);
-    mapping->type = type;
-    mapping->packet = malloc(SIZE_ETH+SIZE_IP+SIZE_TCP);
-    memcpy(mapping->packet,buf, SIZE_ETH+SIZE_IP+SIZE_TCP);
-    mapping->next = nat->mappings;
-    
-    nat->mappings = mapping;
-    pthread_mutex_unlock(&(nat->lock));
-    return NULL;
-}
-
 struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat, void * buf, unsigned char internal){ 
     pthread_mutex_lock(&(nat->lock));
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t *)buf;  
