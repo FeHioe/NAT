@@ -297,6 +297,8 @@ struct sr_nat_mapping *sr_nat_insert_mapping(struct sr_nat *nat, uint32_t ip_int
   return copy;
 }
 
+/* ---------------------------------------------------------- */
+
 void *sr_nat_waiting_mapping(struct sr_nat *nat, uint32_t ip_ext, uint16_t aux_ext, sr_nat_mapping_type type, void * buf){
 
     pthread_mutex_lock(&(nat->lock));
