@@ -62,7 +62,6 @@ struct sr_instance
 
 void send_ICMP(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code);
 
-
 /* -- sr_main.c -- */
 int sr_verify_routing_table(struct sr_instance* sr);
 
