@@ -163,7 +163,6 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /*Initialize headers*/
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
 
-    struct sr_if *tgt_iface = sr_get_interface_from_ip(sr,ip_header->ip_dst);
     struct sr_rt * rt = NULL;
     struct sr_nat_mapping *map = NULL;
     struct sr_nat_connection *con = NULL;
@@ -179,10 +178,13 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         fprintf(stderr, "IP header checksum fail.");
         return;
     }
-    
+
+    /* Check if destined for our interface */
+    struct sr_if* ip_destined = sr_interface_contains_ip(sr, ip_header);
+
      if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
         rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
-        if (tgt_iface != NULL || rt == NULL){
+        if (ip_destined != NULL || rt == NULL){
             sr_send_icmp(sr, packet, len, 3, 3, 0);
         } else if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
@@ -190,9 +192,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         } else if(ip_header->ip_p==6) { /*TCP*/
             fprintf(stderr,"FWD TCP from int\n");
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            calc_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-            if (calc_cksum != tcp_header->tcp_sum){
-                fprintf(stderr,"\t TCP bad checksum %u\n", htons(calc_cksum));
+            expected_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
+            if (expected_cksum != tcp_header->tcp_sum){
+                fprintf(stderr,"\t TCP bad checksum %u\n", htons(expected_cksum));
             } else {
                 fprintf(stderr,"\t fwding\n");
                 map = sr_nat_insert_mapping(&(sr->nat),
@@ -213,12 +215,12 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         } else if(ip_header->ip_p==1 ) { /*ICMP*/
             fprintf(stderr,"FWD ICMP from int\n");
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            incm_cksum = icmp_header->icmp_sum;
+            checksum = icmp_header->icmp_sum;
             icmp_header->icmp_sum = 0;
-            calc_cksum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
-            icmp_header->icmp_sum = incm_cksum;
-            if (incm_cksum != calc_cksum){
-                fprintf(stderr,"Bad cksum %d != %d\n", incm_cksum, calc_cksum);
+            expected_cksum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
+            icmp_header->icmp_sum = checksum;
+            if (checksum != expected_cksum){
+                fprintf(stderr,"Bad cksum %d != %d\n", checksum, expected_cksum);
             }
             else if (icmp_header->icmp_type == 8 && icmp_header->icmp_code == 0){
                 fprintf(stderr,"\t intfwd icmp id %d\n", icmp_header->icmp_id);
@@ -243,14 +245,12 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
             sr_send_icmp(sr, packet, len, 11, 0,0);
-        } else if (tgt_iface == NULL) {
-            fprintf(stderr,"NAT Not for us\n");
         } else if(ip_header->ip_p==6) { /*TCP*/
             fprintf(stderr,"FWD TCP from ext\n");
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            calc_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-            if (calc_cksum != tcp_header->tcp_sum){
-                fprintf(stderr,"\t TCP bad checksum %u\n", htons(calc_cksum));
+            expected_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
+            if (expected_cksum != tcp_header->tcp_sum){
+                fprintf(stderr,"\t TCP bad checksum %u\n", htons(expected_cksum));
             } if (ntohs(tcp_header->tcp_dst) < 1024){
                 fprintf(stderr,"\t INVALID PORT TCP\n");
                 sr_send_icmp(sr, packet, len, 3, 3, 0);
@@ -281,19 +281,17 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                                                      nat_mapping_waiting,
                                                      packet);
                     }
-                } /*else {
-                    sr_send_icmp(sr, packet, len, 3, 3, 0);
-                }*/
+                } 
             }
         } else if(ip_header->ip_p==1 ) { /*ICMP*/
             fprintf(stderr,"FWD ICMP from ext\n");
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            incm_cksum = icmp_header->icmp_sum;
+            checksum = icmp_header->icmp_sum;
             icmp_header->icmp_sum = 0;
-            calc_cksum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
-            icmp_header->icmp_sum = incm_cksum;
-            if (incm_cksum != calc_cksum){
-                fprintf(stderr,"Bad cksum %d != %d\n", incm_cksum, calc_cksum);
+            expected_cksum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
+            icmp_header->icmp_sum = checksum;
+            if (checksum != expected_cksum){
+                fprintf(stderr,"Bad cksum %d != %d\n", checksum, expected_cksum);
             }
             else if (icmp_header->icmp_type == 0 && icmp_header->icmp_code == 0){
                 fprintf(stderr,"\t extfwd icmp id %d\n", icmp_header->icmp_id);
