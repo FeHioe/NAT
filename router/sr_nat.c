@@ -140,29 +140,37 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           nat->mappings = NULL;
         }
 
+        /* free mappings */
         mfree(map);
 
-      }else if (map->type == nat_mapping_tcp){
-          if (elapsed >= nat->tcp_established_timeout){
+      } else if (map->type == nat_mapping_tcp){
+          if (nat->tcp_established_timeout <= elapsed){
               mfree(map);
           } else {
-              unsigned char keep = 0;
-              struct sr_nat_connection *con = map->conns;
-              struct sr_nat_connection *prev_con = map->conns;
-              for (con = map->conns; con != NULL; con = con->next) {
-                  unsigned int timeout = ((con->state == ESTAB2) ? nat->tcp_established_timeout : nat->tcp_transitory_timeout);
-                  if (difftime(curtime, con->last_updated) >= timeout){
-                     prev_con->next = con->next;
-                     free(con);
-                     con = prev_con;
-                  } else {
-                     keep = 1;
-                  }
+            unsigned char exists = 0;
+            struct sr_nat_connection *connection = map->conns;
+            struct sr_nat_connection *temp_con = NULL;
+
+            while (connection) {
+
+              if (connection->state == ESTAB2){
+                unsigned int timeout = nat->tcp_established_timeout;
+              } else {
+                unsigned int timeout = nat->tcp_transitory_timeout;
               }
-              
-              if (!keep){
-                  mfree(map);
+
+              if (timeout <= difftime(curtime, connection->last_updated)){
+                temp_con->next = connection->next;
+                free(connection);
+                connection = temp_con;
+              } else {
+                exists = 1;
               }
+            }
+
+            if (exists == 0){
+              mfree(map);
+            }
           }
       }
       
