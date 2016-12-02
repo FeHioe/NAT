@@ -74,25 +74,6 @@
 #endif
 #define ICMP_DATA_SIZE 28
 
-#define SIZE_ETH sizeof(sr_ethernet_hdr_t)
-#define SIZE_IP sizeof(sr_ip_hdr_t)
-#define SIZE_ARP sizeof(sr_arp_hdr_t)
-#define SIZE_ICMP sizeof(sr_icmp_t3_hdr_t)
-#define SIZE_TCP sizeof(sr_tcp_hdr_t)
-#define SIZE_PTCP sizeof(sr_tcp_pseudo_hdr_t)
-
-/* Structure of a ICMP header
- */
-struct sr_icmp_hdr {
-  uint8_t icmp_type;
-  uint8_t icmp_code;
-  uint16_t icmp_sum;
-  
-} __attribute__ ((packed)) ;
-typedef struct sr_icmp_hdr sr_icmp_hdr_t;
-
-/* Structure of a ICMP Echo header
- */
 struct sr_icmp_t8_hdr {
   uint8_t icmp_type;
   uint8_t icmp_code;
@@ -103,28 +84,14 @@ struct sr_icmp_t8_hdr {
 } __attribute__ ((packed)) ;
 typedef struct sr_icmp_t8_hdr sr_icmp_t8_hdr_t;
 
-
-/* Structure of a type3 ICMP header
- */
-struct sr_icmp_t3_hdr {
-  uint8_t icmp_type;
-  uint8_t icmp_code;
-  uint16_t icmp_sum;
-  uint16_t unused;
-  uint16_t next_mtu;
-  uint8_t data[ICMP_DATA_SIZE];
-
-} __attribute__ ((packed)) ;
-typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
-
-
-/* Structure of a TCP header
- */
 struct sr_tcp_hdr {
   uint16_t tcp_src;
   uint16_t tcp_dst;
   uint32_t tcp_seq;
   uint32_t tcp_ack;
+  uint16_t tcp_wdw;
+  uint16_t tcp_sum;
+  uint16_t tcp_ptr;
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   unsigned int tcp_ns:1;
   unsigned int reserved:3;
@@ -152,23 +119,54 @@ struct sr_tcp_hdr {
 #else
 #error "Byte ordering ot specified " 
 #endif 
-  uint16_t tcp_wdw;
-  uint16_t tcp_sum;
-  uint16_t tcp_ptr;
 } __attribute__ ((packed)) ;
 typedef struct sr_tcp_hdr sr_tcp_hdr_t;
 
-
-/* Structure of a TCP-Pseudo header
- */
-struct sr_tcp_pseudo_hdr {
+struct sr_pseudo_tcp_hdr {
   uint32_t ip_src;
   uint32_t ip_dst;
   uint8_t reserved;
   uint8_t ip_p;
   uint16_t len;
 } __attribute__ ((packed)) ;
-typedef struct sr_tcp_pseudo_hdr sr_tcp_pseudo_hdr_t;
+typedef struct sr_pseudo_tcp_hdr sr_pseudo_tcp_hdr_t;
+
+
+/* Structure of a ICMP header
+ */
+struct sr_icmp_hdr {
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_sum;
+  
+} __attribute__ ((packed)) ;
+typedef struct sr_icmp_hdr sr_icmp_hdr_t;
+
+
+/* Structure of a type3 ICMP header
+ */
+struct sr_icmp_t3_hdr {
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_sum;
+  uint16_t unused;
+  uint16_t next_mtu;
+  uint8_t data[ICMP_DATA_SIZE];
+
+} __attribute__ ((packed)) ;
+typedef struct sr_icmp_t3_hdr sr_icmp_t3_hdr_t;
+
+/* Structure of a type11 ICMP header
+ */
+struct sr_icmp_t11_hdr {
+  uint8_t icmp_type;
+  uint8_t icmp_code;
+  uint16_t icmp_sum;
+  uint16_t unused;
+  uint8_t data[ICMP_DATA_SIZE];
+
+} __attribute__ ((packed)) ;
+typedef struct sr_icmp_t11_hdr sr_icmp_t11_hdr_t;
 
 
 /*
