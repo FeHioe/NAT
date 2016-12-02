@@ -166,7 +166,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           }
       }
       
-      prev = map;
+      temp = map;
       map = map->next;
     }
 
