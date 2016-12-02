@@ -65,7 +65,8 @@ void sr_send_icmp(struct sr_instance* sr,
         unsigned int len, 
         uint8_t type, 
         uint8_t code);
-void sendIPPacket(struct sr_instance* sr,
+
+void send_IP(struct sr_instance* sr,
                uint8_t* packet, 
                unsigned int len, 
                struct sr_rt* lpm);
