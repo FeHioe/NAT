@@ -91,7 +91,7 @@ struct sr_arpcache {
     pthread_mutexattr_t attr;
 };
 
-void sr_handle_arpreq(struct sr_instance *sr, struct sr_arpreq *req);
+void handle_arpreq(struct sr_arpreq *sr_req, struct sr_instance *sr);
 
 struct sr_rt *check_routing_table(struct sr_instance *sr, sr_ip_hdr_t *ip_header);
 

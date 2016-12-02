@@ -70,7 +70,7 @@ void sendIPPacket(struct sr_instance* sr,
                                                      packet, 
                                                      len, 
                                                      rt->interface);
-        sr_handle_arpreq(sr,req);
+        handle_arpreq(req, sr);
     }
     pthread_mutex_unlock(&(sr->cache.lock));
 } /*end sendIPPacket */
