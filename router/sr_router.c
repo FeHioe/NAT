@@ -376,7 +376,7 @@ void process_ip_nat(struct sr_instance* sr, uint8_t* packet, unsigned int len, c
                         struct sr_nat_mapping *map = malloc(sizeof(struct sr_nat_mapping));
                         map->ip_ext = ip_header->ip_src;
                         map->aux_ext = ntohs(tcp_header->tcp_dst);
-                        map->type = nat_mapping_waiting;
+                        map->type = nat_mapping_wait;
                         map->last_updated = time(NULL);
                         map->conns = NULL;                            
                         map->packet = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t) + sizeof(sr_tcp_hdr_t));

@@ -17,13 +17,13 @@ struct sr_nat_connection {
   /* add TCP connection state data members here */
   uint32_t ip;
   uint8_t state;
+  time_t last_updated; /* use to timeout mappings */
 
   #define SYN_SENT 1
   #define SYN_RCVD 2
   #define ESTABLISHED 3
   #define ESTAB2 5
-
-  time_t last_updated; /* use to timeout mappings */
+  
   struct sr_nat_connection *next;
 };
 
