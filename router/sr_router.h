@@ -60,12 +60,7 @@ struct sr_instance
     struct sr_nat nat;
 };
 
-void sr_send_icmp(struct sr_instance* sr,
-        uint8_t *buf,
-        unsigned int len, 
-        uint8_t type, 
-        uint8_t code,
-        uint32_t ip_src);
+void send_ICMP(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code);
 
 
 /* -- sr_main.c -- */

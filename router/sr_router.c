@@ -67,7 +67,7 @@ void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct s
     }
 }
 
-void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code, uint32_t ip_src){
+void send_ICMP(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code){
     
     uint8_t* reply_packet = malloc(len + sizeof(sr_icmp_t8_hdr_t));
     memset(reply_packet, 0, len + sizeof(sr_icmp_t8_hdr_t));
@@ -122,7 +122,7 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         struct sr_arpentry* entry = sr_arpcache_lookup(&sr->cache, lpm->gw.s_addr);
         
         if (entry) {
-            memcpy(e_header->ether_dhost ,entry->mac, 6);
+            memcpy(e_header->ether_dhost, entry->mac, 6);
             memcpy(e_header->ether_shost, interface->addr, 6);
 
             ip_header->ip_ttl = ip_header->ip_ttl - 1;
@@ -160,9 +160,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /* Check for internal and external */
     if (strcmp(interface, "eth1") == 0){ /* Internal */
         if (ip_destined){
-            sr_send_icmp(sr, packet, len, 3, 3, 0);
+            send_ICMP(sr, packet, len, 3, 3);
         } else if (ip_header->ip_ttl <= 1){
-            sr_send_icmp(sr, packet, len, 11, 0,0);
+            send_ICMP(sr, packet, len, 11, 0);
         } else if (ip_header->ip_p == 1) { /* ICMP */
 
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -224,7 +224,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
         } 
     } else if (strcmp(interface, "eth2") == 0){ /* External */
         if (ip_header->ip_ttl <= 1){
-            sr_send_icmp(sr, packet, len, 11, 0,0);
+            send_ICMP(sr, packet, len, 11, 0);
         } else if(ip_header->ip_p == 1) { /* ICMP */
 
             sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -271,7 +271,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             } 
 
             if (ntohs(tcp_header->tcp_dst) < 1024){
-                sr_send_icmp(sr, packet, len, 3, 3, 0);
+                send_ICMP(sr, packet, len, 3, 3);
             } else {
                 struct sr_nat_mapping *map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
                 /* update connections */
