@@ -64,12 +64,12 @@ void sr_send_icmp(struct sr_instance* sr,
         uint8_t *buf,
         unsigned int len, 
         uint8_t type, 
-        uint8_t code);
-
-void send_IP(struct sr_instance* sr,
+        uint8_t code,
+        uint32_t ip_src);
+void sendIPPacket(struct sr_instance* sr,
                uint8_t* packet, 
                unsigned int len, 
-               struct sr_rt* lpm);
+               struct sr_rt* rt);
 
 
 /* -- sr_main.c -- */
