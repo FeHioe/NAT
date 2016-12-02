@@ -111,7 +111,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
         /* free mappings */
         mfree(map);
 
-      } else if (map->type == nat_mapping_waiting && 6.0 <= elapsed){
+      } else if (map->type == nat_mapping_wait && 6.0 <= elapsed){
 
         struct sr_nat_mapping *external_map = sr_nat_lookup_external(nat, map->aux_ext, nat_mapping_tcp);
         if (external_map){
@@ -119,7 +119,7 @@ void *sr_nat_timeout(void * nat_ptr) {  /* Periodic Timout handling */
           struct sr_nat_connection *connection = map->conns;
 
           while (connection) {
-            if (connection->conn_ip == map->ip_ext){
+            if (connection->ip == map->ip_ext){
               exists = 1;
               break;
             }

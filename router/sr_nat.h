@@ -9,28 +9,20 @@
 typedef enum {
   nat_mapping_icmp,
   nat_mapping_tcp,
-  nat_mapping_waiting
+  nat_mapping_wait
   /* nat_mapping_udp, */
 } sr_nat_mapping_type;
 
 struct sr_nat_connection {
   /* add TCP connection state data members here */
-  uint32_t conn_ip;
+  uint32_t ip;
   uint8_t state;
-/*#define LISTEN 1*/
-#define SYN_SENT 2
-#define SYN_REC 3
-#define ESTAB1 4
-#define ESTAB2 5
-/*#define FIN_W1 6
-#define FIN_W2 7
-#define CLOSE_W 7*/
-#define CLOSING 8
-/*#define LAST_ACK 9
-#define TIME_W 10
-#define CLOSED 0*/
-  /*uint8_t ext_flags;
-  uint8_t int_flags;*/
+
+  #define SYN_SENT 1
+  #define SYN_RCVD 2
+  #define ESTABLISHED 3
+  #define ESTAB2 5
+
   time_t last_updated; /* use to timeout mappings */
   struct sr_nat_connection *next;
 };
