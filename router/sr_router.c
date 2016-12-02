@@ -67,7 +67,6 @@ void send_IP(struct sr_instance* sr, uint8_t* packet, unsigned int len, struct s
     }
 }
 
-sr_send_icmp(sr, packet, len, 3, 3, 0);
 void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uint8_t type, uint8_t code, uint32_t ip_src){
     
     uint8_t* reply_packet = malloc(len + sizeof(sr_icmp_t8_hdr_t));
@@ -117,7 +116,7 @@ void sr_send_icmp(struct sr_instance* sr, uint8_t *packet, unsigned int len, uin
         if (ip_src == 0){
             ip_src = iface->ip;
         }
-        
+
         ip_header->ip_hl = 5;
         ip_header->ip_v = 4;
         ip_header->ip_tos = 0;
