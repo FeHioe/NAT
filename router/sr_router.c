@@ -163,10 +163,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /*Initialize headers*/
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
 
-    struct sr_rt * rt = NULL;
+    struct sr_rt * rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);;
     struct sr_nat_mapping *map = NULL;
     struct sr_nat_connection *con = NULL;
-    /*struct sr_if *int_if = sr_get_interface(sr,"eth1");*/
     struct sr_if *ext_if = sr_get_interface(sr,"eth2");
 
     /*Checksum check*/
@@ -183,8 +182,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     struct sr_if* ip_destined = sr_interface_contains_ip(sr, ip_header);
 
      if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
-        rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
-        if (ip_destined != NULL || rt == NULL){
+        if (ip_destined != NULL){
             sr_send_icmp(sr, packet, len, 3, 3, 0);
         } else if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
