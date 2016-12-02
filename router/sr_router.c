@@ -272,7 +272,7 @@ void process_ip_nat(struct sr_instance* sr, uint8_t* packet, unsigned int len, c
 
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
             
-            expected_cksum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+            expected_cksum = tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
             if (expected_cksum != tcp_header->tcp_sum){
                 fprintf(stderr, "TCP header checksum fail.");
                 return;
@@ -287,7 +287,7 @@ void process_ip_nat(struct sr_instance* sr, uint8_t* packet, unsigned int len, c
             ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
             
             tcp_header->tcp_src = htons(map->aux_ext);
-            tcp_header->tcp_sum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+            tcp_header->tcp_sum = tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
 
             mfree(map);
 
@@ -337,7 +337,7 @@ void process_ip_nat(struct sr_instance* sr, uint8_t* packet, unsigned int len, c
 
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
             
-            expected_cksum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+            expected_cksum = tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
             if (expected_cksum != tcp_header->tcp_sum){
                 fprintf(stderr, "TCP header checksum fail.");
                 return;
@@ -355,7 +355,7 @@ void process_ip_nat(struct sr_instance* sr, uint8_t* packet, unsigned int len, c
                     ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
                     
                     tcp_header->tcp_dst = map->aux_int;
-                    tcp_header->tcp_sum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+                    tcp_header->tcp_sum = tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
 
                     mfree(map);
 
