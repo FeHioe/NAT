@@ -164,9 +164,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
 
     struct sr_rt * rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);;
-    struct sr_nat_mapping *map = NULL;
     struct sr_nat_connection *con = NULL;
-    struct sr_if *ext_if = sr_get_interface(sr,"eth2");
 
     /*Checksum check*/
     uint16_t checksum = ip_header->ip_sum;
@@ -181,12 +179,42 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
     /* Check if destined for our interface */
     struct sr_if* ip_destined = sr_interface_contains_ip(sr, ip_header);
 
-     if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
-        if (ip_destined != NULL){
+    /* Check for internal and external */
+    if (strcmp(interface, "eth1") == 0){ /* Internal */
+        if (ip_destined){
             sr_send_icmp(sr, packet, len, 3, 3, 0);
         } else if (ip_header->ip_ttl <= 1){
-            fprintf(stderr,"Packet died\n");
             sr_send_icmp(sr, packet, len, 11, 0,0);
+        } else if (ip_header->ip_p == 1) { /* ICMP */
+
+            sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+            
+            /*Checksum check*/
+            checksum = icmp_header->icmp_sum;
+            icmp_header->icmp_sum = 0;
+            expected_cksum = cksum(icmp_header, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));
+            icmp_header->icmp_sum = checksum;
+            if (checksum != expected_cksum){
+                fprintf(stderr, "ICMP header checksum fail.");
+                return;
+            }
+            
+            if (icmp_header->icmp_type == 8 && icmp_header->icmp_code == 0){
+                struct sr_nat_mapping *map = sr_nat_insert_mapping(&(sr->nat), ip_header->ip_src, icmp_header->icmp_id, nat_mapping_icmp);
+
+                icmp_header->icmp_id = map->aux_ext;
+                icmp_header->icmp_sum = 0;
+                icmp_header->icmp_sum = cksum(icmp_header, len - sizeof(sr_ethernet_hdr_t) - sizeof(sr_ip_hdr_t));;
+                
+                struct sr_if *external = sr_get_interface(sr, "eth2");
+                ip_header->ip_src = external->ip;
+                ip_header->ip_sum = 0;
+                ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
+
+                mfree(map);
+                sendIPPacket(sr, packet, len, rt);
+            }
+
         } else if(ip_header->ip_p==6) { /*TCP*/
             fprintf(stderr,"FWD TCP from int\n");
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
@@ -200,7 +228,9 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                                         tcp_header->tcp_src,
                                         nat_mapping_tcp);
                 con = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 1);
-                ip_header->ip_src = ext_if->ip;
+
+                struct sr_if *external = sr_get_interface(sr, "eth2");
+                ip_header->ip_src = external->ip;
                 ip_header->ip_sum = 0;
                 ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
                 
@@ -210,35 +240,7 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 sendIPPacket(sr, packet, len, rt);
             }
             
-        } else if(ip_header->ip_p==1 ) { /*ICMP*/
-            fprintf(stderr,"FWD ICMP from int\n");
-            sr_icmp_t8_hdr_t * icmp_header = (sr_icmp_t8_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            checksum = icmp_header->icmp_sum;
-            icmp_header->icmp_sum = 0;
-            expected_cksum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
-            icmp_header->icmp_sum = checksum;
-            if (checksum != expected_cksum){
-                fprintf(stderr,"Bad cksum %d != %d\n", checksum, expected_cksum);
-            }
-            else if (icmp_header->icmp_type == 8 && icmp_header->icmp_code == 0){
-                fprintf(stderr,"\t intfwd icmp id %d\n", icmp_header->icmp_id);
-                map = sr_nat_insert_mapping(&(sr->nat),
-                                        ip_header->ip_src,
-                                        icmp_header->icmp_id,
-                                        nat_mapping_icmp);
-                /*map->ip_ext = ip_header->ip_dst;*/
-                fprintf(stderr,"\t intfwd icmp ext id %d\n", map->aux_ext);
-                icmp_header->icmp_id = map->aux_ext;
-                icmp_header->icmp_sum = 0;
-                icmp_header->icmp_sum = cksum((uint8_t*)icmp_header,len-SIZE_ETH-SIZE_IP);
-                
-                ip_header->ip_src = ext_if->ip;
-                ip_header->ip_sum = 0;
-                ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
-                mfree(map);
-                sendIPPacket(sr, packet, len, rt);
-            }
-        }
+        } 
     } else if (strcmp(interface, "eth2") == 0){ /*EXTERNAL*/
         if (ip_header->ip_ttl <= 1){
             fprintf(stderr,"Packet died\n");
