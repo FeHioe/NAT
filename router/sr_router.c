@@ -283,9 +283,10 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 
             sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
             
-            expected_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
+            expected_cksum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
             if (expected_cksum != tcp_header->tcp_sum){
-                fprintf(stderr,"\t TCP bad checksum %u\n", htons(expected_cksum));
+                fprintf(stderr, "TCP header checksum fail.");
+                return;
             } 
 
             if (ntohs(tcp_header->tcp_dst) < 1024){
@@ -293,26 +294,28 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
             } else {
                 map = sr_nat_lookup_external(&(sr->nat), ntohs(tcp_header->tcp_dst), nat_mapping_tcp);
                 con = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 0);
+
                 if (map){
                     ip_header->ip_dst = map->ip_int;
                     ip_header->ip_sum = 0;
-                    ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
+                    ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
                     
                     tcp_header->tcp_dst = map->aux_int;
-                    tcp_header->tcp_sum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
+                    tcp_header->tcp_sum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+
                     mfree(map);
+
                     rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
                     if (rt != NULL){
                         sendIPPacket(sr, packet, len, rt);
                     }
+
                 } else if (tcp_header->syn) {
+
                     rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
+
                     if (rt != NULL){
-                        map = sr_nat_waiting_mapping(&(sr->nat),
-                                                     ip_header->ip_src,
-                                                     ntohs(tcp_header->tcp_dst),
-                                                     nat_mapping_waiting,
-                                                     packet);
+                        map = sr_nat_waiting_mapping(&(sr->nat), ip_header->ip_src, ntohs(tcp_header->tcp_dst), nat_mapping_waiting, packet);
                     }
                 } 
             }
