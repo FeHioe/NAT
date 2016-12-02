@@ -216,30 +216,29 @@ void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
                 sendIPPacket(sr, packet, len, rt);
             }
 
-        } else if(ip_header->ip_p==6) { /*TCP*/
-            fprintf(stderr,"FWD TCP from int\n");
-            sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-            expected_cksum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-            if (expected_cksum != tcp_header->tcp_sum){
-                fprintf(stderr,"\t TCP bad checksum %u\n", htons(expected_cksum));
-            } else {
-                fprintf(stderr,"\t fwding\n");
-                map = sr_nat_insert_mapping(&(sr->nat),
-                                        ip_header->ip_src,
-                                        tcp_header->tcp_src,
-                                        nat_mapping_tcp);
-                con = sr_nat_update_connection(&(sr->nat), packet+SIZE_ETH, 1);
+        } else if (ip_header->ip_p == 6){ /* TCP */
 
-                struct sr_if *external = sr_get_interface(sr, "eth2");
-                ip_header->ip_src = external->ip;
-                ip_header->ip_sum = 0;
-                ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
-                
-                tcp_header->tcp_src = htons(map->aux_ext);
-                tcp_header->tcp_sum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-                mfree(map);
-                sendIPPacket(sr, packet, len, rt);
-            }
+            sr_tcp_hdr_t *tcp_header = (sr_tcp_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+            
+            expected_cksum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+            if (expected_cksum != tcp_header->tcp_sum){
+                fprintf(stderr, "TCP header checksum fail.");
+                return;
+            } 
+
+            map = sr_nat_insert_mapping(&(sr->nat), ip_header->ip_src, tcp_header->tcp_src, nat_mapping_tcp);
+            con = sr_nat_update_connection(&(sr->nat), packet + sizeof(sr_ethernet_hdr_t), 1);
+
+            struct sr_if *external = sr_get_interface(sr, "eth2");
+            ip_header->ip_src = external->ip;
+            ip_header->ip_sum = 0;
+            ip_header->ip_sum = cksum(ip_header, sizeof(sr_ip_hdr_t));
+            
+            tcp_header->tcp_src = htons(map->aux_ext);
+            tcp_header->tcp_sum = sr_tcp_cksum(packet + sizeof(sr_ethernet_hdr_t), len - sizeof(sr_ethernet_hdr_t));
+
+            mfree(map);
+            sendIPPacket(sr, packet, len, rt);
             
         } 
     } else if (strcmp(interface, "eth2") == 0){ /*EXTERNAL*/
