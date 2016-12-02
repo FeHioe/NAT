@@ -197,7 +197,6 @@ void sr_handlepacket(struct sr_instance* sr,
   
   /* Check ethernet frame type - Ether ARP or IP */
   uint16_t ethernet_type = ethertype((uint8_t *) e_header);
-
   if (ethernet_type == ethertype_arp) {
     printf("Ethernet Type: ARP\n");
     process_arp(sr, packet, len, interface);

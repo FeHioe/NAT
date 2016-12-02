@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
     printf("Using %s\n", VERSION_INFO);
 
-    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:I:E:R:n:")) != EOF)
+    while ((c = getopt(argc, argv, "hs:v:p:u:t:r:l:T:I:E:R:n")) != EOF)
     {
         switch (c)
         {
@@ -130,7 +130,6 @@ int main(int argc, char **argv)
 
     /* -- zero out sr instance -- */
     sr_init_instance(&sr);
-
     /* -- set up routing table from file -- */
     if(template == NULL) {
         sr.template[0] = '\0';
