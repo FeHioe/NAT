@@ -182,7 +182,7 @@ void natHandleIPPacket(struct sr_instance* sr,
                 
                 tcp_header->tcp_src = htons(map->aux_ext);
                 tcp_header->tcp_sum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-                sr_free_mapping(map);
+                mfree(map);
                 sendIPPacket(sr, packet, len, rt);
             }
             
@@ -211,7 +211,7 @@ void natHandleIPPacket(struct sr_instance* sr,
                 ip_header->ip_src = ext_if->ip;
                 ip_header->ip_sum = 0;
                 ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
-                sr_free_mapping(map);
+                mfree(map);
                 sendIPPacket(sr, packet, len, rt);
             }
         }
@@ -243,7 +243,7 @@ void natHandleIPPacket(struct sr_instance* sr,
                     
                     tcp_header->tcp_dst = map->aux_int;
                     tcp_header->tcp_sum = sr_tcp_cksum(packet+SIZE_ETH, len-SIZE_ETH);
-                    sr_free_mapping(map);
+                    mfree(map);
                     rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
                     if (rt != NULL){
                         sendIPPacket(sr, packet, len, rt);
@@ -290,7 +290,7 @@ void natHandleIPPacket(struct sr_instance* sr,
                         ip_header->ip_sum = cksum((uint8_t*)ip_header,SIZE_IP);
                         sendIPPacket(sr, packet, len, rt);
                     }
-                    sr_free_mapping(map);
+                    mfree(map);
                 }
             }
         } 
