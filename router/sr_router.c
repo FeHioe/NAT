@@ -89,7 +89,7 @@ void sr_send_icmp(struct sr_instance* sr,
     sr_ethernet_hdr_t* eth_header = (sr_ethernet_hdr_t*) packet;
     sr_ip_hdr_t* ip_header = (sr_ip_hdr_t*)(packet+SIZE_ETH);
     sr_icmp_t3_hdr_t* icmp_header = (sr_icmp_t3_hdr_t*)(packet+SIZE_ETH+SIZE_IP);
-    struct sr_rt* rt = sr_find_routing_entry_int(sr, ip_header->ip_src);
+    struct sr_rt* rt = check_routing_table(sr, ip_header);
     
     if(rt){
         fprintf(stderr,"Found route %s\n",rt->interface);
