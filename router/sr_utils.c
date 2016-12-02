@@ -26,7 +26,7 @@ uint16_t tcp_cksum(void *data, int len){
    sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*) data;
    void * pseudo = calloc(tcp_len, 1);
 
-   sr_tcp_pseudo_hdr_t * ptcp_headr = (sr_tcp_pseudo_hdr_t*) pseudo;
+   sr_pseudo_tcp_hdr_t * ptcp_headr = (sr_pseudo_tcp_hdr_t*) pseudo;
    ptcp_headr->ip_src = ip_header->ip_src;
    ptcp_headr->ip_dst = ip_header->ip_dst;
    ptcp_headr->reserved = 0;
