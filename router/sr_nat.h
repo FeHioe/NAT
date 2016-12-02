@@ -104,6 +104,6 @@ struct sr_nat_mapping *sr_nat_insert_connection(struct sr_nat *nat,
 struct sr_nat_connection *sr_nat_update_connection(struct sr_nat *nat,
   void *buf, unsigned char internal);
 
-void * sr_free_mapping(struct sr_nat_mapping * map);
+void * mfree(struct sr_nat_mapping * map);
 
 #endif
