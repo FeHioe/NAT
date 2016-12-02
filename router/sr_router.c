@@ -160,21 +160,27 @@ void sr_send_icmp(struct sr_instance* sr,
 }/* end sr_send_icmp */
 
 void natHandleIPPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface){
-    sr_ip_hdr_t * ip_header = (sr_ip_hdr_t *)(packet+SIZE_ETH);
+    /*Initialize headers*/
+    sr_ip_hdr_t *ip_header = (sr_ip_hdr_t*)(packet + sizeof(sr_ethernet_hdr_t));
+
     struct sr_if *tgt_iface = sr_get_interface_from_ip(sr,ip_header->ip_dst);
     struct sr_rt * rt = NULL;
     struct sr_nat_mapping *map = NULL;
     struct sr_nat_connection *con = NULL;
+    /*struct sr_if *int_if = sr_get_interface(sr,"eth1");*/
     struct sr_if *ext_if = sr_get_interface(sr,"eth2");
 
-    uint16_t incm_cksum = ip_header->ip_sum;
+    /*Checksum check*/
+    uint16_t checksum = ip_header->ip_sum;
     ip_header->ip_sum = 0;
-    uint16_t calc_cksum = cksum((uint8_t*)ip_header,SIZE_IP);
-    ip_header->ip_sum = incm_cksum;
+    uint16_t expected_cksum = cksum(ip_header, ip_header->ip_hl * 4);
+    ip_header->ip_sum = checksum;
+    if (checksum != expected_cksum){
+        fprintf(stderr, "IP header checksum fail.");
+        return;
+    }
     
-    if (calc_cksum != incm_cksum){
-        fprintf(stderr,"Bad checksum\n");
-    } else if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
+     if (strcmp(interface, "eth1") == 0){ /*INTERNAL*/
         rt = (struct sr_rt*)sr_find_routing_entry_int(sr, ip_header->ip_dst);
         if (tgt_iface != NULL || rt == NULL){
             sr_send_icmp(sr, packet, len, 3, 3, 0);
